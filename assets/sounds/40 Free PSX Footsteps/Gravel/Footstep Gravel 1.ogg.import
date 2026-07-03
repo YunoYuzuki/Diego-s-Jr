@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/Footstep Gravel 1.ogg-41f454c07eb350b1590faa44088fbc1a.oggstr"
+
+[deps]
+
+source_file="res://assets/sounds/40 Free PSX Footsteps/Gravel/Footstep Gravel 1.ogg"
+dest_files=[ "res://.import/Footstep Gravel 1.ogg-41f454c07eb350b1590faa44088fbc1a.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

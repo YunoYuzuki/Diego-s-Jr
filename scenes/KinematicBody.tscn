@@ -1,0 +1,263 @@
+[gd_scene load_steps=27 format=2]
+
+[ext_resource path="res://scripts/Camera.gd" type="Script" id=1]
+[ext_resource path="res://scripts/KinematicBody.gd" type="Script" id=2]
+[ext_resource path="res://assets/sounds/som_lanterna.ogg" type="AudioStream" id=4]
+[ext_resource path="res://assets/musics/ambience_theme.mp3" type="AudioStream" id=5]
+[ext_resource path="res://scripts/shaders/overlay_ps1.gdshader" type="Shader" id=6]
+[ext_resource path="res://assets/sounds/40 Free PSX Footsteps/Concrete/Footstep Concrete 3.ogg" type="AudioStream" id=7]
+[ext_resource path="res://assets/fonts/pixelmix.ttf" type="DynamicFontData" id=9]
+[ext_resource path="res://assets/icons/lanterna_icon.png" type="Texture" id=10]
+[ext_resource path="res://assets/icons/cassette_animation.png" type="Texture" id=12]
+[ext_resource path="res://scripts/crosshair.gd" type="Script" id=13]
+
+[sub_resource type="CapsuleShape" id=1]
+height = 1.8
+
+[sub_resource type="StyleBoxEmpty" id=24]
+
+[sub_resource type="StyleBoxFlat" id=7]
+bg_color = Color( 0.709804, 0.709804, 0.709804, 1 )
+
+[sub_resource type="StyleBoxEmpty" id=8]
+
+[sub_resource type="DynamicFont" id=9]
+font_data = ExtResource( 9 )
+
+[sub_resource type="ShaderMaterial" id=12]
+shader = ExtResource( 6 )
+shader_param/resolucao_x = 540.0
+shader_param/resolucao_y = 380.0
+shader_param/color_depth = 56.0
+shader_param/saturacao = 1.06
+shader_param/brilho = 0.97
+shader_param/contraste = 1.04
+shader_param/dither_force = 0.18
+shader_param/tom_quente = 0.022
+shader_param/static_intensity = 0.035
+shader_param/static_speed = 12.0
+shader_param/grain = 0.02
+shader_param/flicker = 0.01
+shader_param/scanline_force = 0.022
+shader_param/vignette_size = 0.18
+
+[sub_resource type="AtlasTexture" id=14]
+flags = 4
+atlas = ExtResource( 12 )
+region = Rect2( 200, 540, 400, 270 )
+
+[sub_resource type="AtlasTexture" id=15]
+flags = 4
+atlas = ExtResource( 12 )
+region = Rect2( 1000, 540, 400, 270 )
+
+[sub_resource type="AtlasTexture" id=16]
+flags = 4
+atlas = ExtResource( 12 )
+region = Rect2( 200, 100, 400, 250 )
+
+[sub_resource type="AtlasTexture" id=17]
+flags = 4
+atlas = ExtResource( 12 )
+region = Rect2( 1000, 100, 400, 250 )
+
+[sub_resource type="AtlasTexture" id=18]
+flags = 4
+atlas = ExtResource( 12 )
+region = Rect2( 1800, 100, 400, 250 )
+
+[sub_resource type="AtlasTexture" id=19]
+flags = 4
+atlas = ExtResource( 12 )
+region = Rect2( 2600, 100, 400, 250 )
+
+[sub_resource type="AtlasTexture" id=20]
+flags = 4
+atlas = ExtResource( 12 )
+region = Rect2( 3400, 100, 400, 250 )
+
+[sub_resource type="SpriteFrames" id=21]
+animations = [ {
+"frames": [ SubResource( 14 ), SubResource( 15 ), SubResource( 16 ), SubResource( 17 ), SubResource( 18 ), SubResource( 19 ), SubResource( 20 ) ],
+"loop": true,
+"name": "New Anim",
+"speed": 14.0
+}, {
+"frames": [ ExtResource( 12 ) ],
+"loop": true,
+"name": "default",
+"speed": 5.0
+} ]
+
+[sub_resource type="DynamicFont" id=23]
+font_data = ExtResource( 9 )
+
+[sub_resource type="DynamicFont" id=22]
+font_data = ExtResource( 9 )
+
+[node name="KinematicBody" type="KinematicBody"]
+collision_layer = 3
+script = ExtResource( 2 )
+
+[node name="CollisionShape" type="CollisionShape" parent="."]
+transform = Transform( 1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0 )
+shape = SubResource( 1 )
+
+[node name="Camera" type="Camera" parent="."]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -0.000558376, 1.75137, -0.336791 )
+current = true
+script = ExtResource( 1 )
+
+[node name="RayCast" type="RayCast" parent="Camera"]
+transform = Transform( 1.01041, 0, 0, 0, 1.01041, 0, 0, 0, 1.26855, 0, 0, -0.37599 )
+enabled = true
+cast_to = Vector3( 0, 0, -4 )
+collision_mask = 3
+collide_with_areas = true
+
+[node name="Position3D" type="Position3D" parent="Camera"]
+transform = Transform( -0.099863, 0, -0.00523358, 0, 0.1, 0, 0.00523358, 0, -0.099863, 0.889744, -0.695305, -0.723487 )
+
+[node name="som_lanterna" type="AudioStreamPlayer" parent="Camera"]
+stream = ExtResource( 4 )
+volume_db = -15.0
+
+[node name="CanvasLayer" type="CanvasLayer" parent="Camera"]
+follow_viewport_enable = true
+
+[node name="HotbarContainer" type="HBoxContainer" parent="Camera/CanvasLayer"]
+anchor_top = 1.0
+anchor_bottom = 1.0
+margin_left = 46.0
+margin_top = -109.0
+margin_right = 92.0
+margin_bottom = -69.0
+rect_scale = Vector2( 1.5, 1.5 )
+custom_constants/separation = 50
+
+[node name="Slot1" type="TextureRect" parent="Camera/CanvasLayer/HotbarContainer"]
+margin_bottom = 40.0
+texture = ExtResource( 10 )
+expand = true
+stretch_mode = 6
+
+[node name="Highlight" type="Panel" parent="Camera/CanvasLayer/HotbarContainer/Slot1"]
+margin_right = 40.0
+margin_bottom = 40.0
+custom_styles/panel = SubResource( 24 )
+
+[node name="LanternaIcon" type="Sprite" parent="Camera/CanvasLayer/HotbarContainer/Slot1/Highlight"]
+position = Vector2( 19.3334, 20.6666 )
+rotation = 5.61821
+scale = Vector2( 0.15, 0.144 )
+texture = ExtResource( 10 )
+
+[node name="StaminaBar" type="ProgressBar" parent="Camera/CanvasLayer"]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+margin_left = -124.0
+margin_top = -37.0
+margin_right = 124.0
+margin_bottom = -32.0
+custom_styles/fg = SubResource( 7 )
+custom_styles/bg = SubResource( 8 )
+percent_visible = false
+
+[node name="CrosshairUI" type="Control" parent="Camera/CanvasLayer"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -14.0
+margin_top = -15.0
+margin_right = 26.0
+margin_bottom = 25.0
+rect_scale = Vector2( 0.7, 0.7 )
+mouse_filter = 2
+script = ExtResource( 13 )
+
+[node name="PauseCanvas" type="CanvasLayer" parent="Camera"]
+pause_mode = 1
+
+[node name="PauseOverlay" type="ColorRect" parent="Camera/PauseCanvas"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color( 0, 0, 0, 0.470588 )
+
+[node name="PauseLabel" type="Label" parent="Camera/PauseCanvas"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -104.0
+margin_top = -22.0
+margin_right = -20.0
+margin_bottom = -6.0
+rect_scale = Vector2( 2.5, 2.5 )
+custom_fonts/font = SubResource( 9 )
+text = "PAUSADO"
+align = 1
+valign = 1
+
+[node name="PostProcess" type="CanvasLayer" parent="Camera"]
+layer = 0
+
+[node name="BackBufferCopy" type="BackBufferCopy" parent="Camera/PostProcess"]
+position = Vector2( 511, 296.5 )
+scale = Vector2( 5.16, 3.015 )
+copy_mode = 2
+
+[node name="ColorRect" type="ColorRect" parent="Camera/PostProcess"]
+material = SubResource( 12 )
+use_parent_material = true
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Control" type="Control" parent="Camera/PostProcess"]
+anchor_left = 1.0
+anchor_right = 1.0
+margin_left = -40.0
+margin_bottom = 40.0
+
+[node name="gif_savegame" type="AnimatedSprite" parent="Camera/PostProcess/Control"]
+position = Vector2( -23, 53 )
+scale = Vector2( 0.2, 0.206 )
+frames = SubResource( 21 )
+animation = "New Anim"
+playing = true
+
+[node name="Cassette" type="CanvasLayer" parent="Camera/PostProcess"]
+
+[node name="MensagemLabel" type="Label" parent="Camera/PostProcess/Cassette"]
+anchor_top = 1.0
+anchor_bottom = 1.0
+margin_left = 34.0
+margin_top = -41.0
+margin_right = 74.0
+margin_bottom = -27.0
+custom_fonts/font = SubResource( 23 )
+
+[node name="CassetteUI" type="Control" parent="Camera/PostProcess/Cassette"]
+anchor_top = 1.0
+anchor_bottom = 1.0
+margin_left = 63.0
+margin_top = -79.0
+margin_right = 103.0
+margin_bottom = -39.0
+
+[node name="NomeFita" type="Label" parent="Camera/PostProcess/Cassette/CassetteUI"]
+margin_left = -45.0
+margin_top = 51.0
+margin_right = 15.0
+margin_bottom = 67.0
+custom_fonts/font = SubResource( 22 )
+
+[node name="AudioCassette" type="AudioStreamPlayer" parent="Camera/PostProcess/Cassette"]
+stream = ExtResource( 5 )
+
+[node name="passos" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 7 )
+volume_db = -15.0
+pitch_scale = 0.8

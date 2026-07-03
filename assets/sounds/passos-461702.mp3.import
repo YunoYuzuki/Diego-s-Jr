@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/passos-461702.mp3-e17f96e782d22e92cdcff95b031ce37d.mp3str"
+
+[deps]
+
+source_file="res://assets/sounds/passos-461702.mp3"
+dest_files=[ "res://.import/passos-461702.mp3-e17f96e782d22e92cdcff95b031ce37d.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

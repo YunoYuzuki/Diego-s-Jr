@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/mouse-click-7-411633.mp3-bf9e285674fbf89a7a13c9b4fba1d44e.mp3str"
+
+[deps]
+
+source_file="res://assets/sounds/mouse-click-7-411633.mp3"
+dest_files=[ "res://.import/mouse-click-7-411633.mp3-bf9e285674fbf89a7a13c9b4fba1d44e.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0
