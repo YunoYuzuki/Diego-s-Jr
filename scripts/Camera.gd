@@ -80,6 +80,12 @@ onready var lanterna_icon_node = $CanvasLayer/HotbarContainer/Slot1/Highlight/La
 
 export(Texture) var lanterna_icon
 
+#  Stamina 
+onready var stamina_bar  : ProgressBar = $CanvasLayer/StaminaBar
+var stamina_alpha        : float = 0.0
+var stamina_alpha_target : float = 0.0
+var stamina_fade_speed   : float = 8.0
+
 # 
 func _ready():
 	pause_mode = Node.PAUSE_MODE_PROCESS
@@ -98,6 +104,12 @@ func _ready():
 
 	if lanterna_icon_node:
 		lanterna_icon_node.visible = false
+
+	if stamina_bar:
+		stamina_bar.visible    = true
+		stamina_bar.max_value  = get_parent().max_stamina
+		stamina_bar.value      = get_parent().current_stamina
+		stamina_bar.modulate.a = 0.0
 
 	if pause_canvas:
 		pause_canvas.visible  = false
@@ -178,6 +190,15 @@ func _physics_process(delta):
 	if holder_target_offset.length() < 0.001:
 		holder_current_offset = holder_current_offset.linear_interpolate(Vector3.ZERO, weight * 2.0)
 		holder_current_roll   = lerp_angle(holder_current_roll, 0.0, weight * 2.0)
+
+	#  Stamina UI 
+	if stamina_bar:
+		var player           = get_parent()
+		stamina_bar.value    = player.current_stamina
+		var should_show      = player.is_sprinting or player.current_stamina < player.max_stamina
+		stamina_alpha_target = 1.0 if should_show else 0.0
+		stamina_alpha        = lerp(stamina_alpha, stamina_alpha_target, stamina_fade_speed * delta)
+		stamina_bar.modulate.a = stamina_alpha
 
 	update_hotbar_ui()
 

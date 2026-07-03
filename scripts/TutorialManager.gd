@@ -4,7 +4,7 @@ extends Node
 var lanterna_mostrado  : bool = false
 var interagir_mostrado : bool = false
 var tab_mostrado       : bool = false
-var ctrl_mostrado      : bool = false   # novo: tutorial do agachar
+var ctrl_mostrado      : bool = false
 var exibindo           : bool = false
 var fila               : Array = []
 

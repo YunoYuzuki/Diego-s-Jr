@@ -81,7 +81,6 @@ func load_game(slot: int):
 			break
 	save_file.close()
 
-	# Passo 2: muda de cena — _ready das fitas já vê itens_coletados correto
 	get_tree().change_scene("res://scenes/casa_ofc.tscn")
 	yield(get_tree(), "idle_frame")
 	yield(get_tree(), "idle_frame")
