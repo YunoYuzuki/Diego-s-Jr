@@ -57,7 +57,7 @@ O jogador monta o quebra-cabeça da vida de Laura progressivamente, chegando ao 
 
 | Nome              | Papel                  | Dublagem                  | Observações |
 |-------------------|------------------------|---------------------------|-----------|
-| Laura             | Protagonista           | Mariane                   | Narradora interna; reage aos ambientes |
+| Laura             | Protagonista           | Emilly - Mariane                   | Narradora interna; reage aos ambientes |
 | Pai de Laura      | Personagem ausente     | Tadeu                     | Presente apenas nas fitas cassete |
 | A Sombra          | Ameaça / Antagonista   | Sem fala                  | Manifestação da culpa de Laura |
 | Mãe de Laura      | Personagem ausente     | Bruna (especial)          | Mencionada nas cartas; voz nas fitas |
