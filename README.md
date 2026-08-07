@@ -1,226 +1,211 @@
-# LOST MEMORIES  
-**Memórias Perdidas**
+# Limbo of Memories
 
-**Game Design Document (GDD)**  
-**Versão 2.0.1 — 2026**
+Jogo de terror psicológico em primeira pessoa, com estética PS1/low-poly, desenvolvido em **Godot Engine 3.6** como Trabalho de Conclusão de Curso.
 
-**Equipe de Desenvolvimento**  
-Tadeu • Mariane • Pedro C • Pedro G • Luiz A
+> Anteriormente *Lost Memories* / *Lost Memories: Laura*.
 
-**Motor:** Godot 3.6.2 | **Plataforma:** PC (Windows)
+**Estúdio:** Lunar Black Cat Studios
+**Equipe de desenvolvimento:** Team Static Noise
 
-## 1. Visão Geral do Projeto
+A casa da protagonista representa suas memórias de infância. O foco temático do jogo está em culpa, luto, aceitação e traumas.
 
-| Campo              | Descrição                          |
-|--------------------|------------------------------------|
-| Título             | Lost Memories (Memórias Perdidas) |
-| Gênero             | Horror Psicológico / Exploração Narrativa |
-| Motor              | Godot 3.6.2 stable                |
-| Plataforma         | PC (Windows)                      |
-| Perspectiva        | Primeira Pessoa                   |
-| Estética Visual    | Low-poly estilo PS1               |
-| Duração estimada   | 30 a 60 minutos por partida       |
-| Número de endings  | 2 (bom e ruim)                    |
-| Classificação indicativa | 16+ (temas de morte, drogas, saúde mental) |
-
-## 2. Sinopse
-**A fazer**
-
-## 3. História Detalhada
-
-### 3.1 Protagonista
-
-| Atributo       | Descrição |
-|----------------|---------|
-| Nome           | Laura |
-| Condição       | Morta — presa no limbo na forma de sua casa de infância |
-| Memória        | Completamente apagada no início do jogo |
-| Personalidade (revelada via coletáveis) | Sensível, culpada, isolada, mas com momentos de leveza na infância |
-| Dublagem       | Mariane |
-
-### 3.2 Linha do Tempo da História
-- Infância de Laura na casa — memórias felizes (reveladas via cartas antigas)
-- Pai de Laura adoece gravemente
-- Aniversário de 18 anos de Laura: o pai morre nesse dia
-- A mãe culpa Laura por não ter usado o dinheiro da festa nos medicamentos do pai
-- Laura sai de casa e corta contato com a mãe
-- Laura começa a usar drogas como escapismo
-- Num surto depressivo intenso, Laura induz uma overdose propositalmente
-- Laura morre e acorda no limbo — a casa de infância — sem memória alguma
-
-### 3.3 Estrutura Narrativa
-A história é contada de forma não-linear, reconstruída pelo jogador através dos coletáveis. As fitas cassete revelam momentos emocionais e íntimos (a voz do pai, mensagens deixadas por Laura para si mesma). As cartas revelam os eventos objetivos da história.
-
-O jogador monta o quebra-cabeça da vida de Laura progressivamente, chegando ao final com a imagem completa de quem ela foi.
-
-## 4. Personagens
-
-| Nome              | Papel                  | Dublagem                  | Observações |
-|-------------------|------------------------|---------------------------|-----------|
-| Laura             | Protagonista           | Emilly - Mariane                   | Narradora interna; reage aos ambientes |
-| Pai de Laura      | Personagem ausente     | Tadeu                     | Presente apenas nas fitas cassete |
-| A Sombra          | Ameaça / Antagonista   | Sem fala                  | Manifestação da culpa de Laura |
-| Mãe de Laura      | Personagem ausente     | Bruna (especial)          | Mencionada nas cartas; voz nas fitas |
-| Hannah            | Amiga da protagonista  | Eduarda Ayumi (especial)  | Protetora e maternal |
-| Ryan              | Amigo da protagonista  | Luiz A                    | Descontraído, sensato |
-| Ethan             | Amigo da protagonista  | Gabrel                    | Descontraído e brincalhão |
-
-## 5. Core Loop
-
-**EXPLORAR → ENCONTRAR COLETÁVEL → RECEBER MEMÓRIA → PROCESSAR NARRATIVA → EXPLORAR NOVAMENTE**
-
-O jogador:
-- Explora os cômodos da casa em primeira pessoa
-- Encontra fitas cassete escondidas em locais difíceis
-- Encontra cartas e bilhetes espalhados
-- Ao coletar, recebe um fragmento da memória de Laura (áudio ou texto)
-- A sombra aparece ocasionalmente, criando tensão
-- O jogo salva automaticamente a cada 1 minuto
-- Com memórias suficientes, desbloqueia o ending correspondente
-
-## 6. Mecânicas de Jogo
-
-### 6.1 Movimentação
-- **Andar:** WASD
-- **Correr:** Shift (consome stamina)
-- **Câmera:** Mouse (FPS com head bob, tilt e sway)
-
-### 6.2 Interação
-- Raycast em primeira pessoa
-- Crosshair muda ao mirar em objeto interagível
-- Tecla **E** (ou clique) para interagir
-- Objetos coletados desaparecem imediatamente
-
-### 6.3 Coletáveis
-
-| Tipo            | Quantidade prevista | Função |
-|-----------------|---------------------|--------|
-| Fitas Cassete   | ~8 a 12             | Fragmento de memória em áudio |
-| Cartas / Bilhetes | ~10 a 15          | Fragmentos de memória em texto |
-| Fotos           | ~5                  | Memórias visuais |
-
-### 6.4 Sistema de Save — Slots e Autosave
-Ao clicar em "Novo Jogo", o jogador escolhe um slot. O progresso é salvo automaticamente a cada 1 minuto nesse slot.  
-As fitas cassete **não salvam** mais — são puramente narrativas.
-
-### 6.5 Lanterna
-Encontrada no início do jogo. Essencial para ambientes escuros.
-
-### 6.6 A Sombra
-- Surge aleatoriamente observando
-- Ao detectar o jogador: apaga todas as luzes
-- Efeito sonoro: passos e respiração pesada
-- Representa a culpa de Laura
-
-### 6.7 Ending
-
-| Ending              | Condição                          | Descrição |
-|---------------------|-----------------------------------|---------|
-| **Bom — Paz**       | Coletar todos os coletáveis       | Laura aceita sua história e parte em paz |
-
-## 7. Interface (HUD)
-- Barra de stamina
-- Crosshair dinâmico
-- Inventário (tecla Tab) — apenas visual
-- Notificação discreta de autosave
-
-### 7.1 Gravador
-Objeto fixo na casa. O jogador deve levar as fitas até ele para ouvir (cria ritual e exploração).
-
-## 8. Ambientes
-
-| Cômodo           | Descrição                              | Coletáveis esperados |
-|------------------|----------------------------------------|----------------------|
-| Quarto da Laura  | Primeiro ambiente, escuro e vazio     | 1 carta |
-| Sala de estar    | Sala grande, estática                 | 1 fita, 1 carta |
-| Cozinha          | Muito mal iluminada                   | 1 carta, 1 foto |
-| Quarto do pai    | Cama, computador, violão, remédios    | 2 fitas, 3 cartas |
-| Lavanderia       | Pequena, mal iluminada                | 1 carta |
-| Banheiro         | Pequeno, apertado, mal iluminado      | 1 fita, 1 carta |
-
-## 9. Identidade Visual e Sonora
-
-### 9.1 Visual
-- Low-poly com paleta dessaturada
-- Texturas Nearest (estilo PS1)
-- Shader VHS + filtro de câmera antiga
-- Iluminação ambiente fraca
-
-### 9.2 Sonoro
-- Áudio das fitas com efeito de degradação
-- Tema da Sombra: graves e respiração
-- Dublagem completa (Laura, Pai, Mãe, Hannah, Ryan)
-
-## 10. Backend e Sistema Online
-
-### 10.1 Arquitetura
-- **Client:** Godot 3.6.2
-- **Backend:** Node.js + Express
-- **Banco:** A definir (PostgreSQL ou MongoDB)
-
-### 10.2 Funcionalidades
-- Login/Cadastro
-- Perfil do jogador
-- Ranking Global
-- Envio de dados ao finalizar a partida (tempo, coletáveis, ending)
-
-## 11. Divisão de Tarefas da Equipe
-
-| Membro    | Função Principal               | Tarefas principais |
-|-----------|--------------------------------|--------------------|
-| Tadeu     | Programação + Direção + Modelagem 3D | Todo código Godot, modelos, dublagem do pai |
-| Mariane   | Dublagem + Game Design         | Voz de Laura, ideias de narrativa |
-| Pedro C   | Documentação                   | Manter GDD e documentação do TCC |
-| Pedro G   | Game Design / Ideias           | Puzzles e narrativa |
-| Luiz A    | Game Design / Ideias           | Puzzles, narrativa e dublagem de Ryan |
-
-## 12. Cronograma Macro
-
-| Fase                  | Atividades                              | Status         |
-|-----------------------|-----------------------------------------|----------------|
-| Fase 1 — Pré-produção | GDD, tarefas, backend                   | Pronto         |
-| Fase 2 — Prototipagem | Level layout, mecânicas básicas         | Pronto         |
-| Fase 3 — Produção     | Ambientes, coletáveis, sombra, backend  | Em andamento   |
-| Fase 4 — Polimento    | Shaders, sons, dificuldade              | Em andamento   |
-| Fase 5 — Entrega      | Build final, documentação TCC           | A iniciar      |
-
-## 13. Referências e Inspirações
-
-| Referência                        | O que inspira |
-|-----------------------------------|-------------|
-| Grim Fandango                     | Estrutura de GDD |
-| Silent Hill 2                     | Horror psicológico e culpa |
-| What Remains of Edith Finch       | Narrativa através de objetos |
-| Amnesia: The Dark Descent         | Mecânica de ameaça sem combate |
-| Hellblade: Senua's Sacrifice      | Representação de saúde mental |
-| A Arte de Game Design — Jesse Schell | Referência bibliográfica |
-| Blasfêmia                         | Inventário apenas visual |
-
-## 14. A Fazer
-
-**Programação**
-- Corrigir sistema de carregamento (posição, itens, etc.)
-- Melhorar IA da Sombra
-- Integrar backend completo
-- Implementar coletáveis persistentes e lógica dos endings
-
-**Dublagem e Áudio**
-- Gravar roteiros completos (Laura, Pai, Mãe, Hannah, Ryan)
-- Aplicar efeito de fita cassete
-
-**Modelagem e Visual**
-- Finalizar props e animação da Sombra
-- Aplicar shaders VHS/PS1 em todos os ambientes
-
-**Narrativa**
-- Escrever todas as fitas e cartas
-- Definir posicionamento dos coletáveis
-
-**Infraestrutura**
-- Hospedagem VPS + banco de dados
-- Publicação na Steam
+- **Gênero:** terror psicológico, exploração em primeira pessoa
+- **Motor:** Godot Engine 3.6 (scripts em português)
+- **Restrição de escopo:** não haverá modelos de personagens complexos, por questão de orçamento
 
 ---
 
-**Lost Memories — GDD v2.0.1**  
-*Documento sujeito a alterações conforme o desenvolvimento do projeto.*
+## Índice
+
+1. [Enredo e Narrativa](#enredo-e-narrativa)
+2. [Gameplay](#gameplay)
+3. [Sistema da Sombra](#sistema-da-sombra-a-sombra)
+4. [Estados Emocionais da Laura](#estados-emocionais-da-laura)
+5. [Fitas Cassete e Sr. Gravatinha](#fitas-cassete-e-sr-gravatinha)
+6. [Sistema de Memórias](#sistema-de-memórias)
+7. [Puzzles](#puzzles)
+8. [Interface](#interface)
+9. [Áudio](#áudio)
+10. [Arte e Estética](#arte-e-estética)
+11. [Tecnologia (Godot)](#tecnologia-godot)
+12. [Estúdio e Equipe](#estúdio-e-equipe)
+13. [Histórico de Versões](#histórico-de-versões)
+
+---
+
+## Enredo e Narrativa
+
+### Premissa
+
+Laura revive, em uma versão em limbo de sua casa de infância, memórias marcantes de sua vida — acessadas através de fitas cassete espalhadas pela casa.
+
+### Espinha dorsal da história
+
+- A doença terminal do pai, Jeff, é descoberta quando Laura tem entre 15 e 16 anos.
+- O luto da mãe, Karen, se transforma em abuso psicológico após a morte de Jeff, ocorrida no aniversário de 18 anos de Laura.
+- Karen culpa Laura pelas economias de aniversário não usadas no tratamento médico do pai.
+- Laura sai de casa; há um episódio de overdose em um motel, com mensagens de despedida às amigas.
+- **Final:** Laura sobrevive e acorda no hospital após enfrentar suas memórias (final único, sem final ruim).
+
+### Personagens de apoio
+
+| Personagem | Papel |
+|---|---|
+| Hannah | Vínculo protetor, quase de irmã mais velha |
+| Ethan | Alívio cômico, personalidade caótica |
+| Ryan | Descontraído, com momentos de profundidade |
+
+> **Camada narrativa em avaliação** (ainda não confirmada): gravações de Jeff falando sobre o próprio pai, explorando ciclos geracionais e linguagens do amor.
+
+---
+
+## Gameplay
+
+- Exploração em primeira pessoa
+- Resolução de puzzles para avançar
+- Coleta de fitas cassete que contam a história
+- Leitura de cartas e bilhetes espalhados pela casa
+- A casa muda conforme o jogador progride
+- Inventário desliza pela direita (`Tab`); `Shift+Tab` mostra descrições dos itens
+
+---
+
+## Sistema da Sombra (A Sombra)
+
+A Sombra representa a culpa de Laura. É praticamente estática, sem animações, e sua agressividade aumenta quanto menos fitas o jogador encontrou.
+
+- Aparece perto do jogador, olhando para ele
+- Se observada por cerca de 2 segundos, desaparece
+- Se não observada, anda lentamente em direção ao jogador
+- Pode aparecer muito rapidamente (cerca de 1,8 segundo)
+- Nunca repete a mesma ação várias vezes seguidas
+
+### Ações da Sombra
+
+- Bater nas portas
+- Apagar luzes
+- Fazer a lanterna piscar
+- Prender portas por cerca de 60 segundos
+- Sussurrar
+- Aumentar a tensão do jogador
+
+---
+
+## Estados Emocionais da Laura
+
+Substituem a tradicional barra de vida.
+
+| Estado | Emoji |
+|---|---|
+| Calma | 😐 |
+| Insegura | 😟 |
+| Assustada | 😨 |
+| Em crise | 😭 |
+
+Quando a tensão aumenta: mais estática na câmera, imagem mais escura e Sombra mais agressiva. Permanecer tempo demais em **"Em crise"** resulta em game over.
+
+---
+
+## Fitas Cassete e Sr. Gravatinha
+
+### Fitas cassete
+
+Principal forma de contar a história. O jogador usa um reprodutor de fita cassete. Está planejado um efeito de fita antiga sobre a voz das gravações. O pai de Laura (Jeff) tem várias falas gravadas.
+
+### Sr. Gravatinha
+
+Ursinho de pelúcia de Laura. Se teletransporta pela casa, conversa com ela e traz lembranças da infância. Vários diálogos dele já foram escritos. Funciona como contraponto temático à Sombra.
+
+---
+
+## Sistema de Memórias
+
+O quarto de Laura começa praticamente vazio. Conforme itens importantes são encontrados, ele vai sendo preenchido, transmitindo a sensação de recuperação das lembranças.
+
+---
+
+## Puzzles
+
+- Cartas
+- Documentos
+- Objetos escondidos
+- Cifra de César, cadeados numéricos, desenhos de infância como chave de cifra
+
+Puzzles simples, para não quebrar o ritmo da história.
+
+---
+
+## Interface
+
+- Crosshair dinâmica
+- Estados emocionais substituindo a barra de vida
+- Menu em português
+- Tela de loading com um ursinho
+
+---
+
+## Áudio
+
+- Violão representando o pai
+- Piano lento para momentos emocionais
+- Respiração aumentando conforme a tensão
+- Sons de estática quando Laura está assustada
+
+Boa parte dos efeitos sonoros é controlada pela Godot.
+
+---
+
+## Arte e Estética
+
+- Estética PS1/low-poly, com shader de pós-processamento (`overlay_ps1.shader`)
+- Ícone do jogo: fita cassete, estética de quadrinho estilo Scott Pilgrim, contornos fortes, flat shading; logo monograma (LM)
+- Menu principal com cenário de um cômodo da casa e animações de hover
+- Tela de pickup de itens em 3D, estilo Resident Evil
+
+---
+
+## Tecnologia (Godot)
+
+- Godot Engine 3.6; scripts em português
+- Save automático só é ativado ao entrar em `casa_ofc.tscn`; autosave a cada minuto no slot escolhido pelo jogador
+- Barra de loading tenta acompanhar o carregamento da cena
+- Sistema de inspeção de objetos com pivot/rotação (`Camera.gd`)
+- Migração para Godot 4 adiada, por conta do prazo do TCC
+
+---
+
+## Estúdio e Equipe
+
+### Estúdio
+
+**Lunar Black Cat Studios** — logo de um gato preto com a lua ao fundo. Uma tela inicial exibe o nome do estúdio antes do jogo começar.
+
+### Elenco de vozes
+
+| Personagem | Dublador(a) |
+|---|---|
+| Jeff | Tadeu |
+| Karen | Bruna |
+| Laura criança | Emilly |
+| Laura (depois dos 13 anos) | Mariane |
+| Ethan | Matheus |
+| Ryan | Luiz |
+| Hannah | Eduarda |
+| Sr. Gravatinha (ursinho) | Gabriel |
+
+### Demais funções
+
+| Nome | Função |
+|---|---|
+| Matheus | Trilha sonora e voz de Ethan |
+| Luiz | Game design e voz de Ryan |
+| Pedro G. | Game design |
+| Pedro C. | Documentação |
+| Tadeu | Programação, direção e modelagem 3D |
+
+---
+
+## Histórico de Versões
+
+- **v2.0** — versão anterior do documento
+- **v3.0 (atual)** — inclusão do sistema da Sombra detalhado, estados emocionais, Sr. Gravatinha (nome e diálogos), sistema de memórias do quarto, puzzles, interface, áudio, detalhes técnicos da Godot, ajuste do desfecho da narrativa (Laura sobrevive) e elenco de vozes completo
