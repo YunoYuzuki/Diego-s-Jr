@@ -66,7 +66,7 @@ Laura revive, em uma versão em limbo de sua casa de infância, memórias marcan
 - Coleta de fitas cassete que contam a história
 - Leitura de cartas e bilhetes espalhados pela casa
 - A casa muda conforme o jogador progride
-- Inventário desliza pela direita (`Tab`); `Shift+Tab` mostra descrições dos itens
+- Inventário desliza pela direita (`Tab`)
 
 ---
 
@@ -126,10 +126,7 @@ O quarto de Laura começa praticamente vazio. Conforme itens importantes são en
 
 ## Puzzles
 
-- Cartas
-- Documentos
-- Objetos escondidos
-- Cifra de César, cadeados numéricos, desenhos de infância como chave de cifra
+- A fazer
 
 Puzzles simples, para não quebrar o ritmo da história.
 
