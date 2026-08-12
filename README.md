@@ -174,11 +174,7 @@ Boa parte dos efeitos sonoros é controlada pela Godot.
 
 ---
 
-## Estúdio e Equipe
-
-### Estúdio
-
-**Lunar Black Cat Studios** — logo de um gato preto com a lua ao fundo. Uma tela inicial exibe o nome do estúdio antes do jogo começar.
+## Equipe
 
 ### Elenco de vozes
 
@@ -197,11 +193,11 @@ Boa parte dos efeitos sonoros é controlada pela Godot.
 
 | Nome | Função |
 |---|---|
-| Matheus | Trilha sonora e voz de Ethan |
-| Luiz | Game design e voz de Ryan |
-| Pedro G. | Game design |
-| Pedro C. | Documentação |
-| Tadeu | Programação, direção e modelagem 3D |
+| Matheus | Game design, Trilha sonora e voz de Ethan |
+| Luiz | Game design, API e voz de Ryan |
+| Pedro G. | Game design e tarefas diego (kanban, trello...) |
+| Pedro C. | Documentação e Atualização de telas (Figma) |
+| Tadeu | Programação, direção, roteiro, API, modelagem 3D... |
 
 ---
 
