@@ -253,3 +253,6 @@ Queremos que os jogadores sintam a história e entendam como Laura lidou com a s
 ![ Confirmação3 ]( img/pato.jpeg )
 
 https://github.com/user-attachments/assets/333666da-f511-48ba-9b61-aa1af3ba92c4
+
+link trello:
+https://trello.com/b/C8YVl6mS/diegos-jr
