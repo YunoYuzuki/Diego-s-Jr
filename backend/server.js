@@ -410,6 +410,30 @@ app.put('/api/progress', authMiddleware, async (req, res) => {
     }
 });
 
+// Zera progresso da conta (Novo Jogo no cliente).
+// Diferente do PUT /progress, este endpoint NÃO usa GREATEST — força 0.
+app.post('/api/progress/reset', authMiddleware, async (req, res) => {
+    try {
+        const [check] = await pool.query('SELECT is_banned FROM users WHERE id = ?', [req.userId]);
+        if (check.length && check[0].is_banned) return res.status(403).json({ error: 'Conta banida.' });
+
+        await pool.query(
+            `INSERT INTO game_progress (user_id, playtime_seconds, fitas_normais, fitas_douradas, cartas)
+             VALUES (?, 0, 0, 0, 0)
+             ON DUPLICATE KEY UPDATE
+                playtime_seconds = 0,
+                fitas_normais = 0,
+                fitas_douradas = 0,
+                cartas = 0`,
+            [req.userId]
+        );
+        res.json({ reset: true, playtime_seconds: 0, fitas_normais: 0, fitas_douradas: 0, cartas: 0 });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao resetar progresso.' });
+    }
+});
+
 // =========================================================
 // CLOUD SAVES (save completo do jogo por slot)
 // =========================================================
