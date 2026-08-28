@@ -101,14 +101,11 @@ func _on_toggle_exclusao():
 func _on_slot_pressed(slot: int):
 	var info = SaveManager.get_slot_info(slot)
 
-	# Modo excluso ativo
+	# Modo exclusão ativo
 	if modo_exclusao:
 		if not info.empty:
-			var path = "user://save_slot_%d.save" % slot
-			var dir = Directory.new()
-			if dir.file_exists(path):
-				dir.remove(path)
-				print("Slot ", slot + 1, " excludo!")
+			if SaveManager.delete_save(slot):
+				print("Slot ", slot + 1, " excluído!")
 			modo_exclusao = false
 			_update_delete_button()
 			_update_slot_buttons()
@@ -122,7 +119,7 @@ func _on_slot_pressed(slot: int):
 		close()
 	else:
 		current_slot_to_confirm = slot
-		confirm_label.text = "O que voc deseja?"
+		confirm_label.text = "O que voce deseja?"
 		confirmation_popup.show()
 
 func _on_confirm_save():

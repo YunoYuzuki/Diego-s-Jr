@@ -1,4 +1,4 @@
-extends StaticBody
+extends StaticBody3D
 
 # ==================== CONFIGURAES ====================
 export var angulo_aberta : float = -110.0     # ngulo que abre (negativo = esquerda)
