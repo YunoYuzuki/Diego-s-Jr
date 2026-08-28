@@ -566,21 +566,30 @@ app.delete('/api/saves/:slot', authMiddleware, async (req, res) => {
 
 
 app.get('/api/ranking', async (req, res) => {
+    // Competição: mais itens coletados vence; empate → menor tempo vence.
+    // Quem tem 0 itens (nunca jogou de verdade) fica de fora.
+    // playtime 0 com itens é tratado como 1s pra não "roubar" o 1º lugar.
+    const sql = `
+        SELECT u.username, u.nickname, u.bio, u.avatar_data, u.role,
+               gp.playtime_seconds,
+               gp.fitas_normais, gp.fitas_douradas, gp.cartas,
+               (gp.fitas_normais + gp.fitas_douradas + gp.cartas) AS total_coletado,
+               ROUND(
+                   (gp.fitas_normais + gp.fitas_douradas + gp.cartas) * 3600
+                   / GREATEST(gp.playtime_seconds, 1)
+               , 2) AS eficiencia
+        FROM game_progress gp
+        JOIN users u ON u.id = gp.user_id
+        WHERE u.is_banned = 0
+          AND (gp.fitas_normais + gp.fitas_douradas + gp.cartas) > 0
+        ORDER BY total_coletado DESC,
+                 GREATEST(gp.playtime_seconds, 1) ASC
+        LIMIT 50
+    `;
     try {
-        const [rows] = await pool.query(`
-            SELECT u.username, u.nickname, u.bio, u.avatar_data, u.role,
-                   gp.playtime_seconds,
-                   gp.fitas_normais, gp.fitas_douradas, gp.cartas,
-                   (gp.fitas_normais + gp.fitas_douradas + gp.cartas) AS total_coletado
-            FROM game_progress gp
-            JOIN users u ON u.id = gp.user_id
-            WHERE u.is_banned = 0
-            ORDER BY total_coletado DESC, gp.playtime_seconds ASC
-            LIMIT 10
-        `);
+        const [rows] = await pool.query(sql);
         res.json(rows);
     } catch (err) {
-        // fallback se colunas novas ainda não existirem
         console.error(err);
         try {
             const [rows] = await pool.query(`
@@ -589,8 +598,9 @@ app.get('/api/ranking', async (req, res) => {
                        (gp.fitas_normais + gp.fitas_douradas + gp.cartas) AS total_coletado
                 FROM game_progress gp
                 JOIN users u ON u.id = gp.user_id
-                ORDER BY total_coletado DESC, gp.playtime_seconds ASC
-                LIMIT 10
+                WHERE (gp.fitas_normais + gp.fitas_douradas + gp.cartas) > 0
+                ORDER BY total_coletado DESC, GREATEST(gp.playtime_seconds, 1) ASC
+                LIMIT 50
             `);
             res.json(rows);
         } catch (err2) {
