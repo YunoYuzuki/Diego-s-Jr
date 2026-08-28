@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS users (
     password_changed_at TIMESTAMP NULL DEFAULT NULL,
     last_seen     DATETIME NULL DEFAULT NULL,
     banner_color  VARCHAR(7) NULL DEFAULT '#8b5cf6',
+    email_verified TINYINT(1) NOT NULL DEFAULT 0,
+    email_verify_token VARCHAR(64) NULL DEFAULT NULL,
+    email_verify_expires DATETIME NULL DEFAULT NULL,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 

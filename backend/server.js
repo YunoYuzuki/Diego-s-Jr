@@ -8,6 +8,8 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const app = express();
 app.use(cors());
@@ -39,14 +41,84 @@ const pool = mysql.createPool({
 const ONLINE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutos
 
 async function ensureUserColumns() {
+    const cols = [
+        "ALTER TABLE users ADD COLUMN last_seen DATETIME NULL DEFAULT NULL",
+        "ALTER TABLE users ADD COLUMN banner_color VARCHAR(7) NULL DEFAULT '#8b5cf6'",
+        "ALTER TABLE users ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN email_verify_token VARCHAR(64) NULL DEFAULT NULL",
+        "ALTER TABLE users ADD COLUMN email_verify_expires DATETIME NULL DEFAULT NULL",
+    ];
+    for (const sql of cols) {
+        try { await pool.query(sql); } catch (e) { /* já existe */ }
+    }
+    // Contas legadas (sem token de verificação) ficam liberadas
     try {
-        await pool.query("ALTER TABLE users ADD COLUMN last_seen DATETIME NULL DEFAULT NULL");
-    } catch (e) { /* já existe */ }
-    try {
-        await pool.query("ALTER TABLE users ADD COLUMN banner_color VARCHAR(7) NULL DEFAULT '#8b5cf6'");
-    } catch (e) { /* já existe */ }
+        await pool.query(
+            "UPDATE users SET email_verified = 1 WHERE email_verified = 0 AND (email_verify_token IS NULL OR email_verify_token = '')"
+        );
+    } catch (e) { /* ignore */ }
 }
 ensureUserColumns().catch(err => console.error('ensureUserColumns', err));
+
+const VERIFY_TOKEN_HOURS = 24;
+
+function createMailTransporter() {
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER) {
+        return null;
+    }
+    return nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: String(process.env.SMTP_SECURE || 'false') === 'true',
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+        }
+    });
+}
+
+function frontendBaseUrl() {
+    return String(process.env.FRONTEND_URL || process.env.SITE_URL || 'https://limboofmemories.netlify.app').replace(/\/$/, '');
+}
+
+async function sendVerificationEmail(email, username, rawToken) {
+    const link = `${frontendBaseUrl()}/?verify=${encodeURIComponent(rawToken)}`;
+    const subject = 'Confirme seu e-mail — Limbo of Memories';
+    const text = [
+        `Olá, ${username}!`,
+        '',
+        'Recebemos um pedido de cadastro no Limbo of Memories.',
+        'Para ativar sua conta, abra o link abaixo (válido por 24 horas):',
+        '',
+        link,
+        '',
+        'Se você não criou esta conta, ignore este e-mail.'
+    ].join('\n');
+    const html = `
+      <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;background:#0f0f13;color:#e0e0e0;border-radius:12px;">
+        <h2 style="color:#c4b5fd;margin:0 0 12px;">Limbo of Memories</h2>
+        <p>Olá, <strong>${username}</strong>!</p>
+        <p>Para ativar sua conta, confirme seu e-mail clicando no botão abaixo. O link vale por <strong>24 horas</strong>.</p>
+        <p style="margin:28px 0;text-align:center;">
+          <a href="${link}" style="display:inline-block;padding:12px 22px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;text-decoration:none;border-radius:10px;font-weight:700;">Confirmar e-mail</a>
+        </p>
+        <p style="color:#a1a1aa;font-size:13px;">Se o botão não funcionar, copie e cole este link no navegador:<br>${link}</p>
+        <p style="color:#a1a1aa;font-size:12px;margin-top:24px;">Se você não criou esta conta, ignore este e-mail.</p>
+      </div>`;
+
+    const transporter = createMailTransporter();
+    if (!transporter) {
+        console.warn('[email] SMTP não configurado. Link de verificação (dev):', link);
+        return { sent: false, link };
+    }
+    const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+    await transporter.sendMail({ from, to: email, subject, text, html });
+    return { sent: true, link };
+}
+
+function hashToken(raw) {
+    return crypto.createHash('sha256').update(String(raw)).digest('hex');
+}
 
 function isOnline(lastSeen) {
     if (!lastSeen) return false;
@@ -122,29 +194,138 @@ app.post('/api/register', async (req, res) => {
     if (password.length < 6) {
         return res.status(400).json({ error: 'A senha precisa ter no mínimo 6 caracteres.' });
     }
+    const emailNorm = String(email).trim().toLowerCase();
+    const userNorm = String(username).trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+        return res.status(400).json({ error: 'Informe um e-mail válido.' });
+    }
+    if (!/^[a-zA-Z0-9_]{3,24}$/.test(userNorm)) {
+        return res.status(400).json({ error: 'Usuário: 3–24 caracteres (letras, números ou _).' });
+    }
     try {
         const [existing] = await pool.query(
             'SELECT id FROM users WHERE username = ? OR email = ?',
-            [username, email]
+            [userNorm, emailNorm]
         );
         if (existing.length > 0) {
             return res.status(409).json({ error: 'Usuário ou e-mail já cadastrado.' });
         }
         const passwordHash = await bcrypt.hash(password, 10);
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = hashToken(rawToken);
+        const expires = new Date(Date.now() + VERIFY_TOKEN_HOURS * 60 * 60 * 1000);
+
         const [result] = await pool.query(
-            'INSERT INTO users (username, email, password_hash, nickname) VALUES (?, ?, ?, ?)',
-            [username, email, passwordHash, username]
+            `INSERT INTO users (username, email, password_hash, nickname, email_verified, email_verify_token, email_verify_expires)
+             VALUES (?, ?, ?, ?, 0, ?, ?)`,
+            [userNorm, emailNorm, passwordHash, userNorm, tokenHash, expires]
         );
         await pool.query('INSERT INTO game_progress (user_id) VALUES (?)', [result.insertId]);
-        const token = jwt.sign(
-            { userId: result.insertId, username, role: 'user' },
-            JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-        res.status(201).json({ token, username, nickname: username, role: 'user' });
+
+        let mailInfo = { sent: false };
+        try {
+            mailInfo = await sendVerificationEmail(emailNorm, userNorm, rawToken);
+        } catch (mailErr) {
+            console.error('[email] falha ao enviar verificação:', mailErr);
+        }
+
+        // Não devolve JWT — precisa confirmar o e-mail primeiro
+        res.status(201).json({
+            ok: true,
+            needs_verification: true,
+            email: emailNorm,
+            username: userNorm,
+            message: mailInfo.sent
+                ? 'Conta criada! Enviamos um e-mail de confirmação. Abra o link para ativar sua conta.'
+                : 'Conta criada! Não foi possível enviar o e-mail agora — use "Reenviar verificação" ou configure o SMTP no servidor.',
+            // Em ambiente sem SMTP, o link aparece só no log do servidor (não no JSON público)
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Erro ao criar conta.' });
+    }
+});
+
+app.post('/api/verify-email', async (req, res) => {
+    const raw = String((req.body && req.body.token) || req.query.token || '').trim();
+    if (!raw) {
+        return res.status(400).json({ error: 'Token de verificação ausente.' });
+    }
+    try {
+        const tokenHash = hashToken(raw);
+        const [rows] = await pool.query(
+            `SELECT id, username, nickname, role, email_verified, email_verify_expires
+             FROM users WHERE email_verify_token = ? LIMIT 1`,
+            [tokenHash]
+        );
+        if (!rows.length) {
+            return res.status(400).json({ error: 'Link inválido ou já utilizado.' });
+        }
+        const user = rows[0];
+        if (user.email_verified) {
+            return res.json({ ok: true, already: true, message: 'E-mail já estava confirmado. Pode entrar.' });
+        }
+        if (user.email_verify_expires && new Date(user.email_verify_expires).getTime() < Date.now()) {
+            return res.status(400).json({ error: 'Link expirado. Peça um novo e-mail de verificação.' });
+        }
+        await pool.query(
+            `UPDATE users SET email_verified = 1, email_verify_token = NULL, email_verify_expires = NULL WHERE id = ?`,
+            [user.id]
+        );
+        const token = jwt.sign(
+            { userId: user.id, username: user.username, role: user.role || 'user' },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+        res.json({
+            ok: true,
+            token,
+            username: user.username,
+            nickname: user.nickname || user.username,
+            role: user.role || 'user',
+            message: 'E-mail confirmado! Você já pode usar a conta.'
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao verificar e-mail.' });
+    }
+});
+
+app.post('/api/resend-verification', async (req, res) => {
+    const emailNorm = String((req.body && req.body.email) || '').trim().toLowerCase();
+    if (!emailNorm) {
+        return res.status(400).json({ error: 'Informe o e-mail da conta.' });
+    }
+    try {
+        const [rows] = await pool.query(
+            'SELECT id, username, email_verified FROM users WHERE email = ? LIMIT 1',
+            [emailNorm]
+        );
+        // Resposta genérica anti-enumeration
+        if (!rows.length) {
+            return res.json({ ok: true, message: 'Se o e-mail existir e ainda não estiver verificado, enviaremos um novo link.' });
+        }
+        const user = rows[0];
+        if (user.email_verified) {
+            return res.json({ ok: true, message: 'Esta conta já está verificada. Pode entrar normalmente.' });
+        }
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = hashToken(rawToken);
+        const expires = new Date(Date.now() + VERIFY_TOKEN_HOURS * 60 * 60 * 1000);
+        await pool.query(
+            'UPDATE users SET email_verify_token = ?, email_verify_expires = ? WHERE id = ?',
+            [tokenHash, expires, user.id]
+        );
+        try {
+            await sendVerificationEmail(emailNorm, user.username, rawToken);
+        } catch (mailErr) {
+            console.error('[email] resend falhou:', mailErr);
+            return res.status(500).json({ error: 'Não foi possível enviar o e-mail agora. Tente mais tarde.' });
+        }
+        res.json({ ok: true, message: 'Se o e-mail existir e ainda não estiver verificado, enviamos um novo link.' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao reenviar verificação.' });
     }
 });
 
@@ -155,8 +336,8 @@ app.post('/api/login', async (req, res) => {
     }
     try {
         const [rows] = await pool.query(
-            'SELECT id, username, password_hash, nickname, role, is_banned, ban_reason FROM users WHERE username = ?',
-            [username]
+            'SELECT id, username, password_hash, nickname, role, is_banned, ban_reason, email_verified, email FROM users WHERE username = ? OR email = ?',
+            [username, username]
         );
         if (rows.length === 0) {
             return res.status(401).json({ error: 'Usuário ou senha incorretos.' });
@@ -165,6 +346,14 @@ app.post('/api/login', async (req, res) => {
         const valid = await bcrypt.compare(password, user.password_hash);
         if (!valid) {
             return res.status(401).json({ error: 'Usuário ou senha incorretos.' });
+        }
+        // Contas novas precisam confirmar e-mail; legadas já vêm com email_verified=1
+        if (user.email_verified === 0 || user.email_verified === false) {
+            return res.status(403).json({
+                error: 'Confirme seu e-mail antes de entrar. Verifique a caixa de entrada (e o spam).',
+                needs_verification: true,
+                email: user.email || null
+            });
         }
         if (user.is_banned) {
             return res.status(403).json({
