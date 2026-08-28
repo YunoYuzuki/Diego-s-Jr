@@ -1,0 +1,33 @@
+# ---- Godot 3 ----
+# Cache de import: gerado pela engine, reconstroi sozinho ao abrir o projeto.
+# (nao confundir com os *.import ao lado de cada asset, esses SAO versionados)
+/.import/
+*.translation
+
+# Builds exportados
+/build/
+/export/
+*.dmg
+*.exe
+*.pck
+*.apk
+*.aab
+
+# ---- Backend ----
+node_modules/
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite
+*.sqlite3
+
+# ---- Editores / SO ----
+/.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ---- Ferramentas locais ----
+Godot_v*.zip
+Godot*.app/

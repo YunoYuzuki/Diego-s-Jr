@@ -1,11 +1,11 @@
-extends StaticBody3D
+extends StaticBody
 
 # ==================== CONFIGURAES ====================
-@export var angulo_aberta : float = 110.0     # ngulo que abre (negativo = esquerda)
-@export var velocidade : float = 5.0           # Velocidade da animao
+export var angulo_aberta : float = 110.0     # ngulo que abre (negativo = esquerda)
+export var velocidade : float = 5.0           # Velocidade da animao
 
 # ==================== REFERNCIAS ====================
-@onready var pivot = $pivot_porta
+onready var pivot = $pivot_porta
 
 # ==================== VARIVEIS ====================
 var aberta : bool = false
