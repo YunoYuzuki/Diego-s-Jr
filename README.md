@@ -5,7 +5,7 @@ Jogo de terror psicológico em primeira pessoa, com estética PS1/low-poly, dese
 > Anteriormente *Lost Memories* / *Lost Memories: Laura*.
 
 **Estúdio:** Lunar Black Cat Studios
-**Equipe de desenvolvimento:** Team Static Noise
+**Equipe de desenvolvimento:** Diego's Jr
 
 A casa da protagonista representa suas memórias de infância. O foco temático do jogo está em culpa, luto, aceitação e traumas.
 
