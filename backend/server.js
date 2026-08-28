@@ -36,6 +36,26 @@ const pool = mysql.createPool({
     connectionLimit: 10
 });
 
+const ONLINE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutos
+
+async function ensureUserColumns() {
+    try {
+        await pool.query("ALTER TABLE users ADD COLUMN last_seen DATETIME NULL DEFAULT NULL");
+    } catch (e) { /* já existe */ }
+    try {
+        await pool.query("ALTER TABLE users ADD COLUMN banner_color VARCHAR(7) NULL DEFAULT '#8b5cf6'");
+    } catch (e) { /* já existe */ }
+}
+ensureUserColumns().catch(err => console.error('ensureUserColumns', err));
+
+function isOnline(lastSeen) {
+    if (!lastSeen) return false;
+    const t = new Date(lastSeen).getTime();
+    if (Number.isNaN(t)) return false;
+    return (Date.now() - t) <= ONLINE_THRESHOLD_MS;
+}
+
+
 function authMiddleware(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -177,7 +197,7 @@ app.get('/api/profile', authMiddleware, async (req, res) => {
     try {
         const [rows] = await pool.query(
             `SELECT u.username, u.email, u.nickname, u.bio, u.avatar_data, u.role, u.is_banned, u.ban_reason,
-                    u.nickname_changed_at, u.password_changed_at,
+                    u.nickname_changed_at, u.password_changed_at, u.last_seen, u.banner_color,
                     gp.playtime_seconds, gp.fitas_normais, gp.fitas_douradas, gp.cartas
              FROM users u
              LEFT JOIN game_progress gp ON gp.user_id = u.id
@@ -202,6 +222,9 @@ app.get('/api/profile', authMiddleware, async (req, res) => {
             bio: p.bio || '',
             avatar_data: p.avatar_data || null,
             role: p.role || 'user',
+            banner_color: p.banner_color || '#8b5cf6',
+            is_online: isOnline(p.last_seen),
+            last_seen: p.last_seen || null,
             playtime_seconds: p.playtime_seconds || 0,
             fitas_normais: p.fitas_normais || 0,
             fitas_douradas: p.fitas_douradas || 0,
@@ -222,7 +245,7 @@ app.get('/api/profile', authMiddleware, async (req, res) => {
 });
 
 app.put('/api/profile', authMiddleware, async (req, res) => {
-    const { nickname, bio, avatar_data } = req.body;
+    const { nickname, bio, avatar_data, banner_color } = req.body;
     if (nickname !== undefined && nickname.length > 50) {
         return res.status(400).json({ error: 'O nickname pode ter no máximo 50 caracteres.' });
     }
@@ -241,6 +264,14 @@ app.put('/api/profile', authMiddleware, async (req, res) => {
         // nickname aqui não aplica cooldown — use /account/nickname
         if (bio !== undefined) { fields.push('bio = ?'); values.push(bio || null); }
         if (avatar_data !== undefined) { fields.push('avatar_data = ?'); values.push(avatar_data || null); }
+        if (banner_color !== undefined) {
+            const c = String(banner_color || '').trim();
+            if (!/^#[0-9A-Fa-f]{6}$/.test(c)) {
+                return res.status(400).json({ error: 'Cor do banner inválida. Use formato #RRGGBB.' });
+            }
+            fields.push('banner_color = ?');
+            values.push(c);
+        }
         // permite nickname só se não for mudança "séria" via profile (frontend manda via account/nickname)
         if (nickname !== undefined && fields.length === 0 && avatar_data === undefined && bio === undefined) {
             // ignore pure nickname here
@@ -267,6 +298,7 @@ app.get('/api/players/:username', authMiddleware, async (req, res) => {
     try {
         const [rows] = await pool.query(
             `SELECT u.username, u.nickname, u.bio, u.avatar_data, u.role, u.is_banned,
+                    u.last_seen, u.banner_color,
                     gp.playtime_seconds, gp.fitas_normais, gp.fitas_douradas, gp.cartas
              FROM users u
              LEFT JOIN game_progress gp ON gp.user_id = u.id
@@ -278,6 +310,9 @@ app.get('/api/players/:username', authMiddleware, async (req, res) => {
         if (p.is_banned) return res.status(404).json({ error: 'Jogador não encontrado.' });
         res.json({
             username: p.username,
+            banner_color: p.banner_color || '#8b5cf6',
+            is_online: isOnline(p.last_seen),
+            last_seen: p.last_seen || null,
             nickname: p.nickname || p.username,
             bio: p.bio || '',
             avatar_data: p.avatar_data || null,
@@ -431,6 +466,20 @@ app.post('/api/progress/reset', authMiddleware, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Erro ao resetar progresso.' });
+    }
+});
+
+
+// Heartbeat: jogo chama a cada ~60s enquanto a sessão estiver ativa
+app.post('/api/presence', authMiddleware, async (req, res) => {
+    try {
+        const [check] = await pool.query('SELECT is_banned FROM users WHERE id = ?', [req.userId]);
+        if (check.length && check[0].is_banned) return res.status(403).json({ error: 'Conta banida.' });
+        await pool.query('UPDATE users SET last_seen = NOW() WHERE id = ?', [req.userId]);
+        res.json({ ok: true, is_online: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao atualizar presença.' });
     }
 });
 

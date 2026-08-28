@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS users (
     banned_at     TIMESTAMP    NULL DEFAULT NULL,
     nickname_changed_at TIMESTAMP NULL DEFAULT NULL,
     password_changed_at TIMESTAMP NULL DEFAULT NULL,
+    last_seen     DATETIME NULL DEFAULT NULL,
+    banner_color  VARCHAR(7) NULL DEFAULT '#8b5cf6',
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
