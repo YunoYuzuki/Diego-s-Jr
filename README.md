@@ -15,6 +15,53 @@ A casa da protagonista representa suas memórias de infância. O foco temático 
 
 ---
 
+## Progresso
+
+`░░░░░░░░░░░░░░░░░░░░` **0%**, 0 de 19 issues concluídas
+
+| Fase | Foco | Progresso |
+|---|---|---|
+| 1 | A main abre e roda | 0% (0/4) |
+| 2 | Bugs que os jogadores acharam | 0% (0/3) |
+| 3 | Conta e login dentro do jogo | 0% (0/2) |
+| 4 | API, segurança e contrato | 0% (0/4) |
+| 5 | Peso do repositório | 0% (0/3) |
+| 6 | Telas do Figma (ExpoCEEP 09/10) | 0% (0/3) |
+
+As fases estão em ordem de prioridade, não de gosto. A **Fase 1** vem primeiro porque
+um clone que não abre trava todo mundo, e a **Fase 6** vem por último porque não adianta
+tela bonita em jogo que não roda.
+
+> Progresso ao vivo nos [Milestones](https://github.com/YunoYuzuki/Diego-s-Jr/milestones)
+> do GitHub, onde o percentual atualiza sozinho quando a issue fecha. A tabela acima é um
+> retrato, atualizado de tempos em tempos.
+
+### Como pegar uma tarefa
+
+1. Abra as [issues abertas](https://github.com/YunoYuzuki/Diego-s-Jr/issues) e escolha uma.
+2. Comente **"pego essa"**. A partir daí ela é sua, ninguém mexe.
+3. Leia o [CONTRIBUTING.md](CONTRIBUTING.md) antes do primeiro commit. Ele tem o passo a
+   passo de branch, commit e PR, e a lista do que nunca entra no repositório.
+
+Ninguém distribui tarefa aqui. As issues ficam abertas e cada um pega a sua.
+
+Quem está começando, procure as marcadas **`good first issue`**: são as que dão pra
+resolver sem conhecer o projeto inteiro. Hoje são quatro.
+
+E as marcadas **`bloqueante`** são as que travam o trabalho dos outros. Se você tem tempo
+sobrando e não sabe o que pegar, pegue uma dessas.
+
+### Design das telas (Figma)
+
+Protótipo das telas propostas:
+https://www.figma.com/design/WYbslK8CSUTeexhEp1bGUC/limbo?m=auto&t=MRpFmaP4rdMulv39-6
+
+O que está lá é **proposta, não ordem**. Dá pra seguir como está, e dá pra fazer diferente:
+**é só pedir permissão antes** e combinar no canal. O que não pode é cada tela seguir uma
+direção e o jogo virar colcha de retalhos na frente do avaliador.
+
+---
+
 ## Índice
 
 1. [Enredo e Narrativa](#enredo-e-narrativa)
