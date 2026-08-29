@@ -114,7 +114,7 @@ async function sendViaResend(email, subject, text, html) {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) return null;
 
-    const from = process.env.RESEND_FROM || process.env.SMTP_FROM || 'Limbo of Memories <onboarding@resend.dev>';
+    const from = process.env.RESEND_FROM || 'Limbo of Memories <onboarding@resend.dev>';
     try {
         const resp = await fetch('https://api.resend.com/emails', {
             method: 'POST',
