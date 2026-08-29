@@ -17,11 +17,11 @@ A casa da protagonista representa suas memórias de infância. O foco temático 
 
 ## Progresso
 
-`░░░░░░░░░░░░░░░░░░░░` **0%**, 0 de 19 issues concluídas
+`░░░░░░░░░░░░░░░░░░░░` **0%**, 0 de 20 issues concluídas
 
 | Fase | Foco | Progresso |
 |---|---|---|
-| 1 | A main abre e roda | 0% (0/4) |
+| 1 | A main abre e roda | 0% (0/5) |
 | 2 | Bugs que os jogadores acharam | 0% (0/3) |
 | 3 | Conta e login dentro do jogo | 0% (0/2) |
 | 4 | API, segurança e contrato | 0% (0/4) |
@@ -38,6 +38,10 @@ tela bonita em jogo que não roda.
 
 ### Como pegar uma tarefa
 
+**Comece pela issue [#21, "Deixar o projeto rodando na sua máquina"](https://github.com/YunoYuzuki/Diego-s-Jr/issues/21).**
+Ela é a primeira de todas e é a única que várias pessoas fazem ao mesmo tempo sem conflito,
+porque a entrega não é um Pull Request, é um comentário com print. Com o jogo rodando:
+
 1. Abra as [issues abertas](https://github.com/YunoYuzuki/Diego-s-Jr/issues) e escolha uma.
 2. Comente **"pego essa"**. A partir daí ela é sua, ninguém mexe.
 3. Leia o [CONTRIBUTING.md](CONTRIBUTING.md) antes do primeiro commit. Ele tem o passo a
@@ -46,7 +50,7 @@ tela bonita em jogo que não roda.
 Ninguém distribui tarefa aqui. As issues ficam abertas e cada um pega a sua.
 
 Quem está começando, procure as marcadas **`good first issue`**: são as que dão pra
-resolver sem conhecer o projeto inteiro. Hoje são quatro.
+resolver sem conhecer o projeto inteiro. Hoje são cinco.
 
 E as marcadas **`bloqueante`** são as que travam o trabalho dos outros. Se você tem tempo
 sobrando e não sabe o que pegar, pegue uma dessas.
