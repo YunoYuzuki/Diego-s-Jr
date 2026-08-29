@@ -84,22 +84,7 @@ main ─────●─────────────●─────
 
    Sem assinatura de ferramenta, sem "commit final", sem "ajustes".
 
-4. **Antes de abrir o PR, teste um clone limpo**
-
-   Esta é a etapa que teria evitado o maior problema que já tivemos:
-
-   ```bash
-   cd /tmp
-   git clone -b sua-branch https://github.com/YunoYuzuki/Diego-s-Jr.git teste
-   cd teste
-   # abra no Godot 3.6.3 e rode
-   ```
-
-   Se não abrir aí, não vai abrir na máquina de ninguém. **Funcionar na sua
-   máquina não é evidência de nada** — a sua máquina tem arquivos que o
-   repositório não tem.
-
-5. **Abra o Pull Request**
+4. **Abra o Pull Request**
 
    Descreva o que muda e como testar. Peça revisão. Só faça merge depois que
    alguém olhar.
