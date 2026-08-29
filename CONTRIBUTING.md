@@ -9,7 +9,7 @@ urgente do projeto, na frente de qualquer funcionalidade.
 ## Antes de tudo: nunca use "Add files via upload"
 
 Subir arquivo pela interface web do GitHub **substitui, não mescla**. Ela também
-não sobe pasta com estrutura, o que leva a zipar diretórios — e zip no Git não
+não sobe pasta com estrutura, o que leva a zipar diretórios, e zip no Git não
 tem diff, não tem histórico útil, e reenvia inteiro a cada mudança.
 
 Já aconteceu neste repositório: em quatro minutos o `project.godot`, os 482
@@ -27,7 +27,7 @@ git clone https://github.com/YunoYuzuki/Diego-s-Jr.git
 cd Diego-s-Jr
 ```
 
-**Godot 3.6.3** — não 4.x. Abrir este projeto no Godot 4 oferece converter para
+**Godot 3.6.3**, não 4.x. Abrir este projeto no Godot 4 oferece converter para
 4.x, e a conversão é destrutiva. Sintaxe do Godot 4 (`@export`, `@onready`,
 `StaticBody3D`, `Node3D`) não dá erro sutil aqui: **trava o import do projeto
 inteiro.**
