@@ -17,14 +17,14 @@ A casa da protagonista representa suas memórias de infância. O foco temático 
 
 ## Progresso
 
-`░░░░░░░░░░░░░░░░░░░░` **0%**, 0 de 20 issues concluídas
+`░░░░░░░░░░░░░░░░░░░░` **0%**, 0 de 21 issues concluídas
 
 | Fase | Foco | Progresso |
 |---|---|---|
 | 1 | A main abre e roda | 0% (0/5) |
 | 2 | Bugs que os jogadores acharam | 0% (0/3) |
 | 3 | Conta e login dentro do jogo | 0% (0/2) |
-| 4 | API, segurança e contrato | 0% (0/4) |
+| 4 | API, segurança e contrato | 0% (0/5) |
 | 5 | Peso do repositório | 0% (0/3) |
 | 6 | Telas do Figma (ExpoCEEP 09/10) | 0% (0/3) |
 
