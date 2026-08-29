@@ -1,0 +1,39 @@
+# Copie este arquivo para ".env" e preencha com seus dados reais.
+# NUNCA suba o arquivo ".env" real para o GitHub.
+
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=sua_senha_aqui
+DB_NAME=limbo_of_memories
+DB_PORT=3306
+
+JWT_SECRET=troque_isso_por_uma_string_bem_aleatoria_e_secreta
+
+PORT=3000
+
+# URL do site (link no e-mail de verificação)
+FRONTEND_URL=https://limboofmemories.netlify.app
+
+# =========================================================
+# E-mail — escolha UMA das opções abaixo
+# =========================================================
+
+# OPÇÃO 1 (recomendada): Resend — envio por HTTPS, não usa porta SMTP.
+# Hospedagens como Railway costumam bloquear/travar SMTP, o que faz o
+# e-mail nunca sair e a conta ficar travada esperando verificação pra
+# sempre. Resend evita esse problema. Crie uma conta grátis em
+# https://resend.com, pegue a API key e cole abaixo. Se RESEND_API_KEY
+# estiver definida, ela tem prioridade sobre o SMTP.
+RESEND_API_KEY=
+RESEND_FROM="Limbo of Memories <onboarding@resend.dev>"
+
+# OPÇÃO 2: SMTP tradicional (Gmail, Mailgun, etc.) — usado só se
+# RESEND_API_KEY estiver vazia. No Gmail, SMTP_PASS precisa ser uma
+# "Senha de app" (com 2FA ativado na conta) — a senha normal da conta
+# NÃO funciona e falha silenciosamente.
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=seu_email@gmail.com
+SMTP_PASS=sua_senha_de_app
+SMTP_FROM="Limbo of Memories <seu_email@gmail.com>"
