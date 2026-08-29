@@ -1,13 +1,17 @@
 extends Control
 
 onready var music = $Theme_Title
-onready var viewport_3d = $Viewport
+onready var viewport_3d = get_node_or_null("Viewport")
 var save_ui_scene = preload("res://scenes/SaveUI.tscn")
 
 const API = "https://limbo-of-memories-production.up.railway.app/api"
 const CONTA_CFG := "user://limbo_conta.cfg"
 
 func _ready():
+	# Voltar do jogo pro menu chega aqui com o mouse ainda CAPTURED
+	# (PauseCanvas -> unpause_game()). Cursor invisivel = menu parece travado.
+	# Restaurar aqui cobre qualquer caminho que leve ao menu.
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_limpar_ui_gameplay_orfan()
 	
