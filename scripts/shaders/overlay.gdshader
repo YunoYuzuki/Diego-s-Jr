@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, depth_draw_never, cull_disabled, depth_test_disabled;
+render_mode unshaded, depth_draw_never, cull_disabled;
 uniform sampler2D screen_texture : hint_screen_texture, filter_nearest;
 uniform float pixel_size : hint_range(0.0, 20.0, 1.0) = 1.0;
 uniform float levels : hint_range(1.0, 64.0, 1.0) = 20.0;

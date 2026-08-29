@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/audio_lavanderia.mp3-8df87214dd639f94497fedbc5a1402c4.mp3str"
+
+[deps]
+
+source_file="res://assets/gravatinha_voice/audio_lavanderia.mp3"
+dest_files=[ "res://.import/audio_lavanderia.mp3-8df87214dd639f94497fedbc5a1402c4.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

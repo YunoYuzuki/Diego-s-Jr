@@ -1,6 +1,6 @@
 extends KinematicBody
 
-#  Exportveis 
+#  Exportáveis 
 export var velocity        := 5.5
 export var sprint_velocity := 10.5
 export var sensi           := 0.1
@@ -14,8 +14,10 @@ export var stamina_regen_rate_stopped : float = 7.5
 onready var camera   = $Camera
 onready var raycast  : RayCast    = $Camera/RayCast
 onready var target   : Position3D = $Camera/Position3D
-onready var som_chuva             = $Camera/forest_sound
 onready var passos                = $passos
+
+onready var hud = $Camera/hud
+onready var post_process = $Camera/PostProcess
 
 #  Movimento 
 const dist_range : float = 2.0
@@ -23,20 +25,23 @@ var gravity      : float = -20.0
 var rot_x        : float = 0.0
 var vel          := Vector3.ZERO
 
-#  Passos 
-var footstep_timer     : float = 0.001
-var walk_step_interval : float = 0.5
-var run_step_interval  : float = 0.3
+var _zonas_luz_count : int = 0
+var esta_na_luz : bool = false
+var bloqueado_por_colisao : bool = false
+
+# Passos: evita stop/start quando is_on_floor() pisca false por 1 frame
+var _chao_grace : float = 0.0
+const CHAO_GRACE_TEMPO : float = 0.12
+var _quer_passos : bool = false
 
 #  Stamina 
 var current_stamina : float = 100.0
 var can_sprint      : bool  = true
 var is_sprinting    : bool  = false
 
-# 
 func _ready():
 	add_to_group("Persist")
-	add_to_group("player")
+	add_to_group("player") # Unificado para "player" em minúsculo
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	current_stamina = max_stamina
 
@@ -44,14 +49,54 @@ func _ready():
 	if cam:
 		cam.target_pitch  = deg2rad(rot_x)
 		cam.current_pitch = deg2rad(rot_x)
+		# Se o stream NÃO estiver em loop, reinicia sozinho enquanto anda
+	if passos and not passos.is_connected("finished", self, "_on_passos_finished"):
+		passos.connect("finished", self, "_on_passos_finished")
 
-func _input(_event):
-	pass
+	_tirar_hud_do_viewport()
+	
+func _tirar_hud_do_viewport() -> void:
+	# No fundo 3D do MainMenu a casa é só visual — não joga o HUD na raiz
+	# (isso fazia a crosshair aparecer no menu / loading / intro).
+	if typeof(Global) != TYPE_NIL and Global.rodando_como_menu_bg:
+		return
+	var alvos = get_tree().get_nodes_in_group("reparentar_hud")
+	for nodo in alvos:
+		var pai_atual = nodo.get_parent()
+		if pai_atual:
+			pai_atual.remove_child(nodo)
+		get_tree().root.call_deferred("add_child", nodo)
+	call_deferred("_apos_reparentar", alvos)
 
+func _apos_reparentar(alvos: Array) -> void:
+	for nodo in alvos:
+		if nodo.has_method("_atualizar_layout"):
+			nodo._atualizar_layout()
+
+func _debug_hud() -> void:
+	print("HUD dentro da árvore? ", hud.is_inside_tree())
+	print("HUD caminho: ", hud.get_path() if hud.is_inside_tree() else "SEM PAI")
+	print("HUD pai: ", hud.get_parent())
+	for filho in hud.get_children():
+		print("-filho: ", filho.name, " | Tipo: ", filho.get_class())
+		if filho is CanvasLayer:
+			print("layer: ", filho.layer, " | visible: ", filho.visible)
+	
 func _physics_process(delta):
 	if get_tree().paused:
 		return
+	
+	if camera.inspecionando:
+		return
 
+	# CartasUI aberta: sem movimento (árvore NÃO pausada)
+	# get() seguro no Godot 3 — "x" in obj quebra com null
+	if typeof(CartasUI) != TYPE_NIL and is_instance_valid(CartasUI) and CartasUI.get("esta_aberta") == true:
+		return
+	for n in get_tree().get_nodes_in_group("cartas_ui"):
+		if is_instance_valid(n) and n.get("esta_aberta") == true:
+			return
+	
 	var dir = Vector3.ZERO
 	if Input.is_action_pressed("w"): dir -= transform.basis.z
 	if Input.is_action_pressed("s"): dir += transform.basis.z
@@ -62,33 +107,65 @@ func _physics_process(delta):
 
 	var wants_to_sprint = Input.is_action_pressed("shift") and dir.length() > 0.1 and is_on_floor()
 	is_sprinting        = wants_to_sprint and can_sprint and current_stamina > 0
-	var current_speed   = sprint_velocity if is_sprinting else velocity
+	var mult_emocional  = camera.get_velocidade_mult() if camera and camera.has_method("get_velocidade_mult") else 1.0
+	var current_speed   = (sprint_velocity if is_sprinting else velocity) * mult_emocional
 
 	if is_on_floor():
 		vel.y = 0.0
+		_chao_grace = CHAO_GRACE_TEMPO
+	else:
+		_chao_grace = max(_chao_grace - delta, 0.0)
 
 	vel.x  = dir.x * current_speed
 	vel.z  = dir.z * current_speed
 	vel.y += gravity * delta
 	move_and_slide(vel, Vector3.UP)
 
+	# Detecta colisão contra parede/objeto (não-chão) e trava o movimento na hora
+	bloqueado_por_colisao = false
+	for i in get_slide_count():
+		var colisao = get_slide_collision(i)
+		if colisao.normal.dot(Vector3.UP) < 0.7:
+			vel.x = 0.0
+			vel.z = 0.0
+			bloqueado_por_colisao = true
+			break
+
+	# Depois do move: se tocou o chão, renova o grace
+	if is_on_floor():
+		_chao_grace = CHAO_GRACE_TEMPO
+
 	_handle_footsteps(delta, dir)
 	_handle_stamina(delta, dir)
+		
+func _on_passos_finished() -> void:
+	# Stream sem loop: se ainda está andando, toca de novo sem buraco
+	if _quer_passos and passos:
+		passos.play()
 
-#  Passos 
-func _handle_footsteps(delta: float, dir: Vector3):
-	var andando = Vector3(dir.x, 0, dir.z).length() > 0.1
+func _handle_footsteps(_delta: float, dir: Vector3) -> void:
+	if not passos:
+		return
 
-	if andando and is_on_floor():
-		footstep_timer -= delta
-		if footstep_timer <= 0.0:
+	var input_andando = Vector3(dir.x, 0, dir.z).length() > 0.1
+	# Usa velocidade real no chão (mais estável que só o input)
+	var vel_horizontal = Vector3(vel.x, 0, vel.z).length()
+	var no_chao = _chao_grace > 0.0
+	_quer_passos = input_andando and no_chao and vel_horizontal > 0.15
+
+	if _quer_passos:
+		if not passos.playing:
 			passos.play()
-			footstep_timer = run_step_interval if is_sprinting else walk_step_interval
+		var mult_emocional = camera.get_velocidade_mult() if camera and camera.has_method("get_velocidade_mult") else 1.0
+		var pitch_base = 1.6 if is_sprinting else 1.0
+		var pitch_alvo = pitch_base * mult_emocional
+		# Só atualiza se mudou de verdade (evita glitch em alguns backends de áudio)
+		if abs(passos.pitch_scale - pitch_alvo) > 0.02:
+			passos.pitch_scale = pitch_alvo
 	else:
-		footstep_timer = walk_step_interval
-		passos.stop()
+		if passos.playing:
+			passos.stop()
 
-#  Stamina 
 func _handle_stamina(delta: float, dir: Vector3):
 	var andando = Vector3(dir.x, 0, dir.z).length() > 0.1
 
@@ -106,24 +183,60 @@ func _handle_stamina(delta: float, dir: Vector3):
 
 	current_stamina = clamp(current_stamina, 0, max_stamina)
 
-#  Save 
+func entrar_zona_luz() -> void:
+	_zonas_luz_count += 1
+	esta_na_luz = _zonas_luz_count > 0
+
+func sair_zona_luz() -> void:
+	_zonas_luz_count = max(_zonas_luz_count - 1, 0)
+	esta_na_luz = _zonas_luz_count > 0
+
+# SAVE DO PLAYER OTIMIZADO PARA INJEÇÃO DIRETA
 func save():
 	var lanterna_ligada = false
 	if camera.lanterna_atual != null and "ligada" in camera.lanterna_atual:
 		lanterna_ligada = camera.lanterna_atual.ligada
-
 	return {
-		"filename"          : get_filename(),
-		"parent"            : get_parent().get_path(),
+		"node_path"         : str(get_path()), # Usa o caminho do nó absoluto
 		"pos_x"             : translation.x,
 		"pos_y"             : translation.y,
 		"pos_z"             : translation.z,
-		"scale_x"           : scale.x,
-		"scale_y"           : scale.y,
 		"scale_z"           : scale.z,
+		"scale_y"           : scale.y,
+		"scale_x"           : scale.x,
 		"current_stamina"   : current_stamina,
-		"rot_x"             : rot_x,
-		"inventory"         : Inventory.get_save_data(),
+		"rot_x"             : rot_x,               # pitch (olhar cima/baixo), em graus
+		"rot_y"             : camera.target_yaw,    # yaw (girar esquerda/direita), em radianos
+		"inventory"         : Inventory.get_save_data() if Inventory.has_method("get_save_data") else [],
 		"lanterna_equipada" : camera.lanterna_atual != null,
 		"lanterna_ligada"   : lanterna_ligada,
+		"fita_nome"         : camera.fita_nome,
+		"fita_audio_path"   : camera.fita_audio.resource_path if camera.fita_audio else "",
+		"fita_texto"        : camera.fita_texto,
+		"fita_cor_r"        : camera.fita_cor.r,
+		"fita_cor_g"        : camera.fita_cor.g,
+		"fita_cor_b"        : camera.fita_cor.b,
+		"fita_cor_a"        : camera.fita_cor.a,
+		"fita_e_calmante"   : camera.fita_e_calmante,
 	}
+
+# LOAD DO PLAYER — faltava esse método, por isso a posição/rotação
+# não voltavam de fato ao carregar o save.
+func load_data(data: Dictionary) -> void:
+	current_stamina = data.get("current_stamina", current_stamina)
+
+	var pitch_deg = data.get("rot_x", 0.0)
+	var yaw_rad   = data.get("rot_y", 0.0)
+
+	rot_x = pitch_deg
+	rotation.y = yaw_rad # aplica o giro imediatamente no corpo do personagem
+
+	# IMPORTANTE: a câmera controla sua própria rotação todo frame via
+	# current_pitch/current_yaw (interpolados em _physics_process). Só
+	# setar rotation_degrees de fora não funciona — precisa alinhar o
+	# alvo E o valor atual, senão ela volta pro ângulo padrão sozinha.
+	if camera:
+		camera.target_pitch  = deg2rad(pitch_deg)
+		camera.current_pitch = deg2rad(pitch_deg)
+		camera.target_yaw    = yaw_rad
+		camera.current_yaw   = yaw_rad

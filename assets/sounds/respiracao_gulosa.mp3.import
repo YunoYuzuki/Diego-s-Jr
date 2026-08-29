@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/respiracao_gulosa.mp3-1ed1355fab181a7678180888ab1f0127.mp3str"
+
+[deps]
+
+source_file="res://assets/sounds/respiracao_gulosa.mp3"
+dest_files=[ "res://.import/respiracao_gulosa.mp3-1ed1355fab181a7678180888ab1f0127.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

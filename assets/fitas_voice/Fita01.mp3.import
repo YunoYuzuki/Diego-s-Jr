@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/Fita01.mp3-a2494af0bde4cd86edf92969da57263e.mp3str"
+
+[deps]
+
+source_file="res://assets/fitas_voice/Fita01.mp3"
+dest_files=[ "res://.import/Fita01.mp3-a2494af0bde4cd86edf92969da57263e.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

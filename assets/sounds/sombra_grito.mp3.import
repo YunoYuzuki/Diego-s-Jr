@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/sombra_grito.mp3-3c5d3c9455df979afe7e47eba681671f.mp3str"
+
+[deps]
+
+source_file="res://assets/sounds/sombra_grito.mp3"
+dest_files=[ "res://.import/sombra_grito.mp3-3c5d3c9455df979afe7e47eba681671f.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

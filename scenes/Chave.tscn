@@ -53,15 +53,15 @@ data = PoolVector3Array( -0.0005, 0.0016, -0.0004, -0.0006, 0.0018, -0.0004, -0.
 script = ExtResource( 1 )
 
 [node name="chave" type="MeshInstance" parent="."]
-transform = Transform( -0.000753999, 8.94069e-06, -100, 100, 4.47037e-06, -0.000755489, 1.49152e-06, -100, -7.45061e-06, 0, 0.00455762, -0.574261 )
+transform = Transform( -0.000753999, 8.94069e-06, -100, 86.2381, -50.626, -0.000655291, -50.626, -86.2381, 0.000376048, 0, 0.00455761, -0.574261 )
 mesh = SubResource( 2 )
 material/0 = SubResource( 3 )
 
 [node name="OutlineMesh" type="MeshInstance" parent="chave"]
-transform = Transform( 0.98, 0, 0, 0, 0.98, 0, 0, 0, 0.98, 0, 0, 0 )
+transform = Transform( 0.92, -1.21076e-10, -4.90931e-13, -4.63269e-09, 0.92, 5.14204e-14, -7.44924e-13, -5.18909e-13, 0.92, -1.23628e-05, -0.000444981, 5.34288e-11 )
 mesh = SubResource( 4 )
 material/0 = SubResource( 5 )
 
 [node name="CollisionShape" type="CollisionShape" parent="."]
-transform = Transform( -0.000904799, 5.24541e-06, -120, 120, -5.24537e-06, -0.000904799, -5.24541e-06, -120, -5.24537e-06, 0, 0.00455762, -0.574261 )
+transform = Transform( -0.000904799, 5.24541e-06, -120, 103.486, -60.7511, -0.000782937, -60.7511, -103.486, 0.00045354, 1.99031e-16, 0.00455761, -0.574261 )
 shape = SubResource( 6 )

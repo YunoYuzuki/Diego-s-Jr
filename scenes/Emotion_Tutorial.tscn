@@ -1,0 +1,55 @@
+[gd_scene load_steps=6 format=2]
+
+[ext_resource path="res://assets/fonts/KiwiSoda.ttf" type="DynamicFontData" id=1]
+[ext_resource path="res://assets/fonts/MiniPixel/Minipixel-Regular.ttf" type="DynamicFontData" id=2]
+[ext_resource path="res://scripts/Emotion_Tutorial.gd" type="Script" id=3]
+
+[sub_resource type="DynamicFont" id=1]
+size = 50
+font_data = ExtResource( 1 )
+
+[sub_resource type="DynamicFont" id=2]
+size = 20
+font_data = ExtResource( 2 )
+
+[node name="Emotion_Tutorial" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 3 )
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+pause_mode = 2
+layer = 128
+
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -456.5
+margin_top = -266.5
+margin_right = 456.5
+margin_bottom = 266.5
+color = Color( 0, 0, 0, 1 )
+
+[node name="Title_Emotion" type="Label" parent="CanvasLayer"]
+margin_left = 424.0
+margin_top = 54.0
+margin_right = 599.0
+margin_bottom = 105.0
+custom_fonts/font = SubResource( 1 )
+text = "Emoções"
+
+[node name="Label" type="Label" parent="CanvasLayer"]
+margin_left = 89.0
+margin_top = 100.0
+margin_right = 479.0
+margin_bottom = 493.0
+rect_scale = Vector2( 1.15, 1.15 )
+custom_fonts/font = SubResource( 2 )
+text = "As emoções representam seu Estado Mental durante a exploração.
+
+Quanto mais intensas elas se tornam, mais ele fica agressivo, e mais será difícil distinguir a realidade do que existe ao seu redor. Sons e distorções ficarão cada vez mais frequentes.
+
+Encontre um Ponto Tranquilo, isso fará com que você se acalme. Mantenha suas emoções sob controle. Perder o controle pode ter consequências"
+autowrap = true

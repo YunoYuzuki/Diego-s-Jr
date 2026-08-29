@@ -1,6 +1,16 @@
-[gd_scene load_steps=5 format=2]
+[gd_scene load_steps=15 format=2]
 
+[ext_resource path="res://assets/sounds/sussurro01.mp3" type="AudioStream" id=1]
 [ext_resource path="res://scripts/shadow.gd" type="Script" id=2]
+[ext_resource path="res://assets/sounds/door_close.mp3" type="AudioStream" id=3]
+[ext_resource path="res://assets/sounds/respiracao_gulosa.mp3" type="AudioStream" id=4]
+[ext_resource path="res://assets/sounds/sussurros_gulosos2.mp3" type="AudioStream" id=5]
+[ext_resource path="res://assets/sounds/sussurros_gulosos3.mp3" type="AudioStream" id=6]
+[ext_resource path="res://assets/sounds/sussurros_gulosos.mp3" type="AudioStream" id=7]
+[ext_resource path="res://assets/important/male_character_ps1-style/source/idle_shadow.gltf" type="PackedScene" id=8]
+[ext_resource path="res://assets/important/male_character_ps1-style/source/running_crawl_shadow.gltf" type="PackedScene" id=9]
+[ext_resource path="res://assets/sounds/sombra_grito.mp3" type="AudioStream" id=10]
+[ext_resource path="res://assets/sounds/passos_sombra.mp3" type="AudioStream" id=11]
 
 [sub_resource type="ArrayMesh" id=1]
 blend_shape_mode = 0
@@ -19,20 +29,45 @@ surfaces/0 = {
 [sub_resource type="SpatialMaterial" id=2]
 albedo_color = Color( 0, 0, 0, 1 )
 
-[sub_resource type="CapsuleShape" id=3]
+[sub_resource type="CapsuleShape" id=13]
 radius = 0.7
 height = 1.8
 
 [node name="civ" type="KinematicBody"]
 script = ExtResource( 2 )
+som_bater_porta = ExtResource( 3 )
+piscar_duracao_min = 0.5
+piscar_duracao_max = 3.0
+sussurro_1 = ExtResource( 1 )
+sussurro_2 = ExtResource( 5 )
+sussurro_3 = ExtResource( 6 )
+sussurro_4 = ExtResource( 7 )
+audio_respiracao = ExtResource( 4 )
+chao_group = "chao"
+som_passos = ExtResource( 11 )
+som_grito_caca = ExtResource( 10 )
+chance_iniciar_caca = 0.6
+velocidade_caca = 15.0
+cena_idle = ExtResource( 8 )
+cena_running = ExtResource( 9 )
+anim_idle = "idle_shadow2"
+anim_running = "running_crawl"
 
-[node name="RootNode" type="Spatial" parent="."]
+[node name="Armature" type="Spatial" parent="."]
 
-[node name="Civ001" type="MeshInstance" parent="RootNode"]
-transform = Transform( 16.138, 0, 0, 0, -0.601126, 16.1268, 0, -16.1268, -0.601126, 0, 3.0782, 0.0197592 )
+[node name="Civ001" type="MeshInstance" parent="Armature"]
+transform = Transform( 16.138, 0, 0, 0, -0.601126, 16.1268, 0, -16.1268, -0.601126, 0, 0, 0 )
 mesh = SubResource( 1 )
 material/0 = SubResource( 2 )
 
 [node name="CollisionShape" type="CollisionShape" parent="."]
-transform = Transform( 1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, -0.0324883, 1.69053, 0 )
-shape = SubResource( 3 )
+transform = Transform( 1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, -1.46305, 0 )
+shape = SubResource( 13 )
+
+[node name="NavigationAgent" type="NavigationAgent" parent="."]
+
+[node name="idle_shadow" parent="." instance=ExtResource( 8 )]
+transform = Transform( -1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, -3.07908, 0 )
+
+[node name="running_crawl_shadow" parent="." instance=ExtResource( 9 )]
+transform = Transform( -1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, -3.057, 0 )

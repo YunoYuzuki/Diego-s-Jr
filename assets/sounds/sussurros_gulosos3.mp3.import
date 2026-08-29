@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/sussurros_gulosos3.mp3-0b02d42fd44749df9ab263a1743f67cb.mp3str"
+
+[deps]
+
+source_file="res://assets/sounds/sussurros_gulosos3.mp3"
+dest_files=[ "res://.import/sussurros_gulosos3.mp3-0b02d42fd44749df9ab263a1743f67cb.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=2]
+[gd_scene load_steps=10 format=2]
 
 [ext_resource path="res://assets/important/Flashlight.obj" type="ArrayMesh" id=1]
 [ext_resource path="res://scripts/lanterna.gd" type="Script" id=3]
@@ -28,6 +28,18 @@ emission_energy = 1.0
 emission_operator = 0
 emission_on_uv2 = false
 
+[sub_resource type="CylinderMesh" id=10]
+top_radius = 0.1
+
+[sub_resource type="ORMSpatialMaterial" id=11]
+flags_transparent = true
+albedo_color = Color( 0.756863, 0.756863, 0.756863, 0.556863 )
+emission_enabled = true
+emission = Color( 0.368627, 0.368627, 0.368627, 1 )
+emission_energy = 1.0
+emission_operator = 0
+emission_on_uv2 = false
+
 [sub_resource type="BoxShape" id=9]
 extents = Vector3( 1.19832, 1.13037, 1.20743 )
 
@@ -36,6 +48,9 @@ transform = Transform( 0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.3, 0, 0, 0 )
 
 [node name="RigidBody" type="RigidBody" parent="." groups=["interagivel"]]
 script = ExtResource( 3 )
+sumir_baixo_amount = 0.8
+bateria_drain_por_segundo = 0.2
+carga_por_pilha = 25.0
 
 [node name="CollisionShape" type="CollisionShape" parent="RigidBody"]
 transform = Transform( 2.03368, 0, 0, 0, 1.68502, 0, 0, 0, 5.50221, -0.399563, 0.187116, 2.91885 )
@@ -49,18 +64,26 @@ skeleton = NodePath("../..")
 
 [node name="SpotLight" type="SpotLight" parent="RigidBody/Flashlight"]
 transform = Transform( -3.33333, 8.72917e-16, -5.97004e-07, 1.99812e-08, 3.33147, -0.111564, 5.9667e-07, -0.111564, -3.33147, -0.00943289, -0.0910824, 4.51825 )
-light_color = Color( 1, 0.960784, 0.564706, 1 )
-light_energy = 1.2
-spot_range = 75.0
+light_color = Color( 1, 0.992157, 0.921569, 1 )
+light_energy = 0.9
+shadow_enabled = true
+spot_range = 60.0
 spot_attenuation = 2.5
-spot_angle = 25.0
-spot_angle_attenuation = 0.5
+spot_angle = 20.0
+spot_angle_attenuation = 2.2
 
 [node name="OutlineMesh" type="MeshInstance" parent="RigidBody/Flashlight"]
 mesh = SubResource( 7 )
 material/0 = SubResource( 8 )
 
+[node name="MeshInstance" type="MeshInstance" parent="RigidBody/Flashlight"]
+transform = Transform( 1.2, 0, 0, 0, -0.0204403, 1.19983, 0, -1.19983, -0.0204403, -0.00448612, 0.0602704, 5.69313 )
+mesh = SubResource( 10 )
+skeleton = NodePath("")
+material/0 = SubResource( 11 )
+
 [node name="Area" type="Area" parent="RigidBody"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1.02535, 0, 0, 0 )
 collision_layer = 3
 collision_mask = 3
 

@@ -1,0 +1,94 @@
+[gd_scene load_steps=13 format=2]
+
+[ext_resource path="res://assets/fonts/pixelmix.tres" type="DynamicFont" id=1]
+[ext_resource path="res://scripts/TelaInicial.gd" type="Script" id=2]
+[ext_resource path="res://assets/videos/video_1080p.ogv" type="VideoStream" id=3]
+[ext_resource path="res://assets/icons/cassette_animation.png" type="Texture" id=4]
+
+[sub_resource type="AtlasTexture" id=14]
+flags = 4
+atlas = ExtResource( 4 )
+region = Rect2( 200, 540, 400, 270 )
+
+[sub_resource type="AtlasTexture" id=15]
+flags = 4
+atlas = ExtResource( 4 )
+region = Rect2( 1000, 540, 400, 270 )
+
+[sub_resource type="AtlasTexture" id=16]
+flags = 4
+atlas = ExtResource( 4 )
+region = Rect2( 200, 100, 400, 250 )
+
+[sub_resource type="AtlasTexture" id=17]
+flags = 4
+atlas = ExtResource( 4 )
+region = Rect2( 1000, 100, 400, 250 )
+
+[sub_resource type="AtlasTexture" id=18]
+flags = 4
+atlas = ExtResource( 4 )
+region = Rect2( 1800, 100, 400, 250 )
+
+[sub_resource type="AtlasTexture" id=19]
+flags = 4
+atlas = ExtResource( 4 )
+region = Rect2( 2600, 100, 400, 250 )
+
+[sub_resource type="AtlasTexture" id=20]
+flags = 4
+atlas = ExtResource( 4 )
+region = Rect2( 3400, 100, 400, 250 )
+
+[sub_resource type="SpriteFrames" id=23]
+animations = [ {
+"frames": [ SubResource( 14 ), SubResource( 15 ), SubResource( 16 ), SubResource( 17 ), SubResource( 18 ), SubResource( 19 ), SubResource( 20 ) ],
+"loop": true,
+"name": "New Anim",
+"speed": 14.0
+}, {
+"frames": [ ExtResource( 4 ) ],
+"loop": true,
+"name": "default",
+"speed": 5.0
+} ]
+
+[node name="Control" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 2 )
+
+[node name="VideoLogo" type="VideoPlayer" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_bottom = 14.0
+stream = ExtResource( 3 )
+
+[node name="TelaPreta" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color( 0, 0, 0, 1 )
+
+[node name="AvisoAutoSave" type="VBoxContainer" parent="TelaPreta"]
+visible = false
+margin_left = 244.0
+margin_top = 163.0
+margin_right = 779.0
+margin_bottom = 281.0
+alignment = 1
+
+[node name="Label" type="Label" parent="TelaPreta/AvisoAutoSave"]
+margin_top = 37.0
+margin_right = 535.0
+margin_bottom = 80.0
+custom_fonts/font = ExtResource( 1 )
+text = "O jogo salva automaticamente quando o
+ icone abaixo aparecer"
+align = 1
+
+[node name="gif_savegame" type="AnimatedSprite" parent="TelaPreta/AvisoAutoSave"]
+position = Vector2( 263, 181 )
+scale = Vector2( 0.3, 0.309 )
+frames = SubResource( 23 )
+animation = "New Anim"
+playing = true

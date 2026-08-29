@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/fear_emotion.mp3-497ebbdaa9bbab87950b5d6a38930c7b.mp3str"
+
+[deps]
+
+source_file="res://assets/musics/fear_emotion.mp3"
+dest_files=[ "res://.import/fear_emotion.mp3-497ebbdaa9bbab87950b5d6a38930c7b.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

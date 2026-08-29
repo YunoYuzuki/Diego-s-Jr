@@ -1,0 +1,21 @@
+[remap]
+
+importer="wavefront_obj"
+type="Mesh"
+path="res://.import/Untitled 7.obj-4b8fa2d091ec96b25842f0e7c7af18c5.mesh"
+
+[deps]
+
+files=[ "res://.import/Untitled 7.obj-4b8fa2d091ec96b25842f0e7c7af18c5.mesh" ]
+
+source_file="res://assets/important/quarto_laura/carpet/source/Untitled 7.obj"
+dest_files=[ "res://.import/Untitled 7.obj-4b8fa2d091ec96b25842f0e7c7af18c5.mesh", "res://.import/Untitled 7.obj-4b8fa2d091ec96b25842f0e7c7af18c5.mesh" ]
+
+[params]
+
+scale_mesh=Vector3( 1, 1, 1 )
+offset_mesh=Vector3( 0, 0, 0 )
+optimize_mesh_flags=4286
+generate_tangents=true
+vertex_cache_optimization=true
+octahedral_compression=true
