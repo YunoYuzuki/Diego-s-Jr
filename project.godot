@@ -11,7 +11,7 @@ config_version=4
 [application]
 
 config/name="Lost Memories"
-run/main_scene="res://scenes/TelaInicial.tscn"
+run/main_scene="res://scenes/TelaLogin.tscn"
 config/icon="res://assets/icons/LM_icon.png"
 
 [autoload]
@@ -23,7 +23,7 @@ InputManager="*res://scripts/InputManager.gd"
 TutorialManager="*res://scripts/TutorialManager.gd"
 Global="*res://scripts/global.gd"
 Legendas="*res://scenes/Legendas.tscn"
-CartasInventory="*res://scenes/CartasInventory.tscn"
+CartasInventory="*res://scripts/CartasInventory.gd"
 QuartoLaura="*res://scripts/quarto_laura.gd"
 CartasUI="*res://scenes/CartasUI.tscn"
 RankingUI="*res://scripts/RankingUI.gd"

@@ -14,16 +14,19 @@ func _ready():
 	$VBox_Buttons/Carregar.connect("pressed", self, "_on_Btn_Load_pressed")
 	$VBox_Buttons/Iniciar.connect("pressed", self, "_on_Btn_Iniciar_pressed")
 	$VBox_Buttons/Sair.connect("pressed",   self, "_on_Btn_Sair_pressed")
-	$VBox_Buttons/Configurar.connect("pressed", self, "_on_Btn_Configurar_pressed")
-	$VBox_Buttons/Debug.connect("pressed", self, "_on_Debug_pressed")
+	if has_node("VBox_Buttons/Configurar"):
+		$VBox_Buttons/Configurar.connect("pressed", self, "_on_Btn_Configurar_pressed")
+	if has_node("VBox_Buttons/Debug"):
+		$VBox_Buttons/Debug.connect("pressed", self, "_on_Debug_pressed")
 	if has_node("VBox_Buttons/Ranking"):
 		$VBox_Buttons/Ranking.connect("pressed", self, "_on_Btn_Ranking_pressed")
 	
 	if viewport_3d:
 		viewport_3d.render_target_v_flip = true
 	
-	music.volume_db = -20
-	music.play()
+	if music:
+		music.volume_db = -20
+		music.play()
 
 	call_deferred("_garantir_camera_menu")
 	call_deferred("_atualizar_bemvindo")
