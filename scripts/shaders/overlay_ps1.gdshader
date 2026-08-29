@@ -29,7 +29,6 @@ uniform float flicker       : hint_range(0.0, 0.08)  = 0.010;
 
 // ─── Scanlines ───────────────────────────────────────────────
 uniform float scanline_force : hint_range(0.0, 1.0)  = 0.10;
-uniform float tint_emocional : hint_range(0.0, 0.3) = 0.0;
 
 // ─── Vignette ────────────────────────────────────────────────
 uniform float vignette_size : hint_range(0.0, 3.0)   = 0.28;
@@ -60,9 +59,8 @@ void fragment() {
     uv.x = floor(uv.x * resolucao_x + 0.5) / resolucao_x;
     uv.y = floor(uv.y * resolucao_y + 0.5) / resolucao_y;
 
-// ── Cor base (flip vertical pro SCREEN_TEXTURE) ────────────
-vec2 uv_tela = vec2(uv.x, 1.0 - uv.y);
-vec4 cor = texture(SCREEN_TEXTURE, uv_tela);
+    // ── Cor base ──────────────────────────────────────────────
+    vec4 cor = texture(SCREEN_TEXTURE, uv);
 
     // ── Dithering Bayer (PS1-style, antes do banding) ─────────
     vec2 screen_pos = UV * vec2(resolucao_x, resolucao_y);
@@ -82,11 +80,6 @@ vec4 cor = texture(SCREEN_TEXTURE, uv_tela);
     // ── Tom quente ────────────────────────────────────────────
     cor.r += tom_quente * 0.6;
     cor.g += tom_quente * 0.3;
-	
-	// ── Tom emocional (avermelhado conforme a tensão de Laura) ──
-    cor.r += tint_emocional;
-    cor.g -= tint_emocional * 0.4;
-    cor.b -= tint_emocional * 0.4;
 
     // ── Brilho ────────────────────────────────────────────────
     cor.rgb *= brilho;

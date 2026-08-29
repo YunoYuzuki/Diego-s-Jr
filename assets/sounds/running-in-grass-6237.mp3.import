@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/running-in-grass-6237.mp3-f327694984084fc701f6cd625f3d0382.mp3str"
+
+[deps]
+
+source_file="res://assets/sounds/running-in-grass-6237.mp3"
+dest_files=[ "res://.import/running-in-grass-6237.mp3-f327694984084fc701f6cd625f3d0382.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

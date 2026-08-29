@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/Kirito-Mal_-caso-de-saint-mary-2026-03-27-17_33.mp3-09f78e4f5208260807c586aca630349a.mp3str"
+
+[deps]
+
+source_file="res://assets/musics/Kirito-Mal_-caso-de-saint-mary-2026-03-27-17_33.mp3"
+dest_files=[ "res://.import/Kirito-Mal_-caso-de-saint-mary-2026-03-27-17_33.mp3-09f78e4f5208260807c586aca630349a.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

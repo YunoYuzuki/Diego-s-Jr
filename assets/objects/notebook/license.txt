@@ -1,0 +1,11 @@
+Model Information:
+* title:	PSX Laptop
+* source:	https://sketchfab.com/3d-models/psx-laptop-b6b33b14220a460a94176412ff284012
+* author:	Tomitos (https://sketchfab.com/designrobco)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "PSX Laptop" (https://sketchfab.com/3d-models/psx-laptop-b6b33b14220a460a94176412ff284012) by Tomitos (https://sketchfab.com/designrobco) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

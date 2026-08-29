@@ -1,8 +1,9 @@
 extends StaticBody
+
 onready var mesh    = $chave
 onready var outline = $chave/OutlineMesh
+
 var revelada : bool = false
-var coletada : bool = false
 
 func _ready() -> void:
 	add_to_group("interagivel")
@@ -39,24 +40,26 @@ func interagir(player) -> void:
 		return
 	Inventory.add_item("chave_quarto")
 	print("🔑 Jogador pegou a chave do quarto!")
-	coletada = true
-	TelaPickup.mostrar_item("Chave", "Uma chave... preta? Parece ser uma chave normal, apenas.", preload("res://assets/scenes_pickup/chave_pickup.tscn"))
+
+	# Tutoriais ao pegar a chave
+	TutorialManager.tutorial_inventario()
+	TutorialManager.tutorial_agachar()
+
+	# Esconde o objeto do mapa após pegar
 	_set_visivel(false)
 	remove_from_group("interagivel")
 
-# SALVAMENTO CORRIGIDO VIA NODE_PATH
 func save() -> Dictionary:
 	return {
-		"node_path": str(get_path()),
-		"revelada": revelada,
-		"coletada": coletada
+		"filename": "res://scenes/Chave.tscn",
+		"parent":   get_parent().get_path(),
+		"name":     name,
+		"pos_x":    translation.x,
+		"pos_y":    translation.y,
+		"pos_z":    translation.z,
+		"revelada": revelada
 	}
 
 func load_data(data: Dictionary) -> void:
-	coletada = data.get("coletada", false)
-	if coletada:
-		queue_free() # Some do mapa se já foi pega antes
-		return
-
 	revelada = data.get("revelada", false)
 	_set_visivel(revelada)

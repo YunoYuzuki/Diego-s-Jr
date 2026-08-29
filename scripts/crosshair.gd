@@ -10,18 +10,7 @@ var alpha_circulo : float = 0.0
 const RAIO_CIRCULO : float = 12.0
 const VEL_ANIM     : float = 6.0
 
-# Cenas onde a crosshair NUNCA deve aparecer
-const CENAS_SEM_CROSSHAIR := [
-	"res://scenes/MainMenu.tscn",
-	"res://scenes/TelaInicial.tscn",
-	"res://scenes/TelaCarregamento.tscn",
-	"res://scenes/config.tscn",
-	"res://scenes/CenaNarrativa.tscn",
-]
-
 func _ready():
-	# Não entra em ui_persistente sozinha — o HUD pai já cuida disso.
-	# Evita cópias "órfãs" da crosshair na raiz após troca de cena.
 	anchor_left   = 0.5
 	anchor_top    = 0.5
 	anchor_right  = 0.5
@@ -33,70 +22,19 @@ func _ready():
 	rect_size     = Vector2(100.0, 100.0)
 	rect_pivot_offset = rect_size / 2.0
 	mouse_filter  = Control.MOUSE_FILTER_IGNORE
-	_atualizar_visibilidade()
 
 func _process(delta):
-	_atualizar_visibilidade()
-	if not visible:
-		return
 	raio_atual    = lerp(raio_atual,    raio_alvo,                VEL_ANIM * delta)
 	alpha_circulo = lerp(alpha_circulo, raio_alvo / RAIO_CIRCULO, VEL_ANIM * delta)
 	update()
 
 func set_foco(ativo: bool):
-	if not _pode_mostrar():
-		raio_alvo = 0.0
-		return
 	raio_alvo = RAIO_CIRCULO if ativo else 0.0
 
-func _pode_mostrar() -> bool:
-	# Fundo 3D do menu
-	if typeof(Global) != TYPE_NIL and Global.rodando_como_menu_bg:
-		return false
-
-	# Sem câmera de gameplay ativa
-	var cams = get_tree().get_nodes_in_group("camera_player")
-	if cams.empty():
-		return false
-
-	# Cenas de menu / intro / loading / narrativa
-	var cena = get_tree().current_scene
-	if cena == null:
-		return false
-	var path := ""
-	if "filename" in cena and cena.filename != "":
-		path = cena.filename
-	elif cena.has_method("get_filename") and cena.get_filename() != "":
-		path = cena.get_filename()
-	if path in CENAS_SEM_CROSSHAIR:
-		return false
-
-	return true
-
-func _atualizar_visibilidade() -> void:
-	var ok = _pode_mostrar()
-	if visible != ok:
-		visible = ok
-	if not ok:
-		raio_alvo = 0.0
-		raio_atual = 0.0
-		alpha_circulo = 0.0
-
 func _draw():
-	if not visible:
-		return
 	var centro = Vector2(50.0, 50.0)
-
-	# Ponto central só quando NÃO está em foco.
-	# Assim some de verdade dentro do círculo de interação.
-	if alpha_circulo < 0.2:
-		var t = 1.0 - (alpha_circulo / 0.2)
-		var raio_ponto = 2.5 * t
-		if raio_ponto > 0.15:
-			var cor_p = cor_normal
-			cor_p.a = cor_normal.a * t
-			draw_circle(centro, raio_ponto, cor_p)
-
+	var raio_ponto = lerp(2.5, 0.0, alpha_circulo)
+	draw_circle(centro, raio_ponto, cor_normal)
 	if alpha_circulo > 0.01:
 		var cor_c = cor_foco
 		cor_c.a   = alpha_circulo

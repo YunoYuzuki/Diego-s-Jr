@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/guitar_theme.mp3-e500535457f6e95c288cd00d91f4047f.mp3str"
+
+[deps]
+
+source_file="res://assets/musics/guitar_theme.mp3"
+dest_files=[ "res://.import/guitar_theme.mp3-e500535457f6e95c288cd00d91f4047f.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0
