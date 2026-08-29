@@ -63,17 +63,18 @@ ensureUserColumns().catch(err => console.error('ensureUserColumns', err));
 const VERIFY_TOKEN_HOURS = 24;
 
 function createMailTransporter() {
-    if (!process.env.SMTP_HOST || !process.env.SMTP_USER) {
+    const host = process.env.SMTP_HOST;
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+    if (!host || !user || !pass) {
+        console.warn('[email] SMTP incompleto. Defina SMTP_HOST, SMTP_USER e SMTP_PASS no Railway.');
         return null;
     }
     return nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
+        host,
         port: Number(process.env.SMTP_PORT || 587),
         secure: String(process.env.SMTP_SECURE || 'false') === 'true',
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS
-        }
+        auth: { user, pass }
     });
 }
 
@@ -109,11 +110,17 @@ async function sendVerificationEmail(email, username, rawToken) {
     const transporter = createMailTransporter();
     if (!transporter) {
         console.warn('[email] SMTP não configurado. Link de verificação (dev):', link);
-        return { sent: false, link };
+        return { sent: false, link, reason: 'smtp_not_configured' };
     }
     const from = process.env.SMTP_FROM || process.env.SMTP_USER;
-    await transporter.sendMail({ from, to: email, subject, text, html });
-    return { sent: true, link };
+    try {
+        const info = await transporter.sendMail({ from, to: email, subject, text, html });
+        console.log('[email] enviado para', email, 'id=', info && info.messageId);
+        return { sent: true, link };
+    } catch (err) {
+        console.error('[email] falha SMTP:', err && err.message ? err.message : err);
+        return { sent: false, link, reason: 'smtp_error', error: String(err && err.message || err) };
+    }
 }
 
 function hashToken(raw) {
@@ -316,13 +323,25 @@ app.post('/api/resend-verification', async (req, res) => {
             'UPDATE users SET email_verify_token = ?, email_verify_expires = ? WHERE id = ?',
             [tokenHash, expires, user.id]
         );
+        let mailInfo = { sent: false };
         try {
-            await sendVerificationEmail(emailNorm, user.username, rawToken);
+            mailInfo = await sendVerificationEmail(emailNorm, user.username, rawToken);
         } catch (mailErr) {
             console.error('[email] resend falhou:', mailErr);
-            return res.status(500).json({ error: 'Não foi possível enviar o e-mail agora. Tente mais tarde.' });
+            return res.status(500).json({
+                error: 'Não foi possível enviar o e-mail agora. Confira SMTP_HOST / SMTP_USER / SMTP_PASS no Railway.',
+                reason: 'smtp_error'
+            });
         }
-        res.json({ ok: true, message: 'Se o e-mail existir e ainda não estiver verificado, enviamos um novo link.' });
+        if (!mailInfo.sent) {
+            return res.status(503).json({
+                error: mailInfo.reason === 'smtp_not_configured'
+                    ? 'O servidor ainda não está configurado para enviar e-mails (SMTP). Peça ao admin para configurar SMTP_HOST, SMTP_USER e SMTP_PASS.'
+                    : ('Falha ao enviar e-mail: ' + (mailInfo.error || 'erro SMTP')),
+                reason: mailInfo.reason || 'smtp_error'
+            });
+        }
+        res.json({ ok: true, message: 'Enviamos um novo link de verificação. Confira a caixa de entrada e o spam.' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Erro ao reenviar verificação.' });
