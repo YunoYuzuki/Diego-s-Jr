@@ -53,6 +53,12 @@ var _fala_id: int = 0
 # true enquanto o jogo está pausado e há áudio de legenda em andamento
 var _audio_pausado_pelo_jogo: bool = false
 
+# Guarda texto/cor atuais pra poder recolocar se sumir (afastar do gravador, zona de luz, etc.)
+var _texto_atual: String = ""
+var _cor_atual: Color = Color(1, 1, 1, 1)
+# true se a legenda atual é de fita do gravador (protegida: não some por distância/zona)
+var _e_fita_protegida: bool = false
+
 func _ready():
 	# Continua recebendo notificações mesmo com a árvore pausada
 	pause_mode = Node.PAUSE_MODE_PROCESS
@@ -62,17 +68,35 @@ func _ready():
 
 
 func _process(_delta: float) -> void:
-	# Safety net: se o áudio ainda toca e a legenda sumiu sem parar() explícito,
-	# recoloca o texto (cobre o caso Ponto Tranquilo / mudança de emoção).
+	# Safety net: legenda de fita NÃO some por se afastar do gravador nem por
+	# entrar em zona de luz / ponto tranquilo / troca de emoção.
+	# Também mantém o texto VISÍVEL (travado) enquanto o jogo está pausado.
 	if not SaveManager.legendas_ativadas:
 		return
 	if _label == null:
 		return
+	# Durante pause: se temos texto de fita, mantém visível e congelado
+	if get_tree().paused:
+		if _e_fita_protegida and _texto_atual != "":
+			if _label.text != _texto_atual:
+				_label.text = _texto_atual
+				_label.add_color_override("font_color", _cor_atual)
+			_label.visible = true
+		return
 	if _player_atual == null or not is_instance_valid(_player_atual):
 		return
-	if not _player_atual.playing or _player_atual.stream_paused:
+	# Ainda "ativa" se tocando OU stream_paused (pause manual do áudio)
+	var ativo = _player_atual.playing or (("stream_paused" in _player_atual) and _player_atual.stream_paused) or _audio_pausado_pelo_jogo
+	if not ativo and not _e_fita_protegida:
 		return
-	if _label.text != "" and not _label.visible:
+	# Fita protegida: enquanto o áudio existir e a fala não foi cancelada, recoloca
+	if _e_fita_protegida and _texto_atual != "":
+		if _label.text != _texto_atual or not _label.visible:
+			_label.add_color_override("font_color", _cor_atual)
+			_label.text = _texto_atual
+			_label.visible = true
+		return
+	if _label.text != "" and not _label.visible and ativo:
 		_label.visible = true
 
 func _notification(what: int) -> void:
@@ -96,10 +120,15 @@ func _player_eh_fita_protegida(p) -> bool:
 	return false
 
 func pausar() -> void:
-	# Pause do jogo: pausa legenda + áudio (incluindo fita)
+	# Pause do jogo: pausa legenda + áudio (incluindo fita).
+	# O texto FICA travado/visível — não some no pause.
 	if _player_atual != null and is_instance_valid(_player_atual) and _player_atual.playing:
 		_player_atual.stream_paused = true
 		_audio_pausado_pelo_jogo = true
+	if _texto_atual != "" and _label:
+		_label.text = _texto_atual
+		_label.add_color_override("font_color", _cor_atual)
+		_label.visible = true
 
 func despausar() -> void:
 	# Saiu do pause: retoma de onde parou
@@ -124,6 +153,9 @@ func falar(player, stream: AudioStream, texto: String, cor: Color = Color(1, 1, 
 	_fala_id += 1
 	var meu_id = _fala_id
 	_player_atual = player
+	_e_fita_protegida = _player_eh_fita_protegida(player)
+	_texto_atual = ""
+	_cor_atual = cor
 	
 	_audio_pausado_pelo_jogo = false
 	if stream != null:
@@ -138,8 +170,10 @@ func falar(player, stream: AudioStream, texto: String, cor: Color = Color(1, 1, 
 			return # já foi cancelada ou substituída por outra fala
 		# Só esconde se ainda somos o dono da legenda
 		if _player_atual == player:
-			_esconder_texto()
+			_esconder_texto(true)
 			_player_atual = null
+			_e_fita_protegida = false
+			_texto_atual = ""
 		return
 
 	# Modo de múltiplas falas.
@@ -154,8 +188,10 @@ func falar(player, stream: AudioStream, texto: String, cor: Color = Color(1, 1, 
 		yield(player, "finished")
 		if meu_id != _fala_id:
 			return
-		_esconder_texto()
+		_esconder_texto(true)
 		_player_atual = null
+		_e_fita_protegida = false
+		_texto_atual = ""
 		return
 
 	# Separa texto e duração manual (se tiver "@") de cada trecho.
@@ -210,8 +246,10 @@ func falar(player, stream: AudioStream, texto: String, cor: Color = Color(1, 1, 
 		if meu_id != _fala_id:
 			return
 
-	_esconder_texto()
+	_esconder_texto(true)
 	_player_atual = null
+	_e_fita_protegida = false
+	_texto_atual = ""
 
 
 # Remove um eventual "@duracao" no final de um texto sem "|" (fala única).
@@ -230,6 +268,8 @@ func parar() -> void:
 	_fala_id += 1
 	_player_atual = null
 	_audio_pausado_pelo_jogo = false
+	_e_fita_protegida = false
+	_texto_atual = ""
 	_esconder_texto(true)
 
 ## Para legenda + áudio do player atual — EXCETO fita do gravador (nunca para).
@@ -242,10 +282,14 @@ func parar_audio() -> void:
 				_player_atual.stop()
 	_player_atual = null
 	_audio_pausado_pelo_jogo = false
+	_e_fita_protegida = false
+	_texto_atual = ""
 	_esconder_texto(true)
 
 
 func _mostrar_texto(texto: String, cor: Color = Color(1, 1, 1, 1)) -> void:
+	_texto_atual = texto
+	_cor_atual = cor
 	if not SaveManager.legendas_ativadas:
 		_label.visible = false
 		return
@@ -257,13 +301,27 @@ func _mostrar_texto(texto: String, cor: Color = Color(1, 1, 1, 1)) -> void:
 func _esconder_texto(forcar: bool = false) -> void:
 	# forcar=true: parar() / parar_audio() / fim legítimo.
 	# forcar=false: fim natural via yield — se o áudio ainda está tocando
-	# (yield acordou cedo por troca de emoção / zona de luz), NÃO esconde.
+	# (yield acordou cedo por se afastar / zona de luz / emoção), NÃO esconde.
 	if not forcar:
-		if _player_atual != null and is_instance_valid(_player_atual):
+		if _e_fita_protegida and _texto_atual != "":
+			# Fita: só esconde de verdade quando o áudio acabou de fato
+			if _player_atual != null and is_instance_valid(_player_atual):
+				var ainda = _player_atual.playing or (("stream_paused" in _player_atual) and _player_atual.stream_paused) or _audio_pausado_pelo_jogo
+				if ainda:
+					# recoloca se sumiu
+					if _label and not _label.visible:
+						_label.text = _texto_atual
+						_label.add_color_override("font_color", _cor_atual)
+						_label.visible = true
+					return
+		elif _player_atual != null and is_instance_valid(_player_atual):
 			if _player_atual.playing and not _player_atual.stream_paused and not _audio_pausado_pelo_jogo:
 				return
 	if _label:
 		_label.visible = false
+	if forcar:
+		_texto_atual = ""
+		_e_fita_protegida = false
 
 
 func atualizar_visibilidade() -> void:

@@ -76,6 +76,8 @@ func interagir(_player) -> void:
 
 	if typeof(CartasInventory) != TYPE_NIL:
 		CartasInventory.add_carta(id, nome, texto)
+	if typeof(TutorialManager) != TYPE_NIL and TutorialManager.has_method("tutorial_cartas"):
+		TutorialManager.tutorial_cartas()
 
 	if typeof(SaveManager) != TYPE_NIL and SaveManager.has_method("marcar_item_coletado"):
 		SaveManager.marcar_item_coletado(id)

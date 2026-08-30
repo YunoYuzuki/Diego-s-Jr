@@ -16,13 +16,30 @@ func _ready():
 		queue_free()
 		return
 	
-	if fita_anterior != "" and not SaveManager.itens_coletados.has(fita_anterior):
+	# Só aparece no mapa depois que a fita anterior TERMINOU de tocar
+	# (não basta ter coletado — precisa ter sido reproduzida até o fim)
+	if fita_anterior != "" and not _fita_anterior_ja_tocou():
 		hide()
-		set_process(true)  # fica checando até desbloquear
+		set_process(true)
 		return
 
+func _fita_anterior_ja_tocou() -> bool:
+	if fita_anterior == "":
+		return true
+	if typeof(SaveManager) == TYPE_NIL:
+		return false
+	# fitas_reproduzidas é Dictionary nome -> true
+	if "fitas_reproduzidas" in SaveManager:
+		var fr = SaveManager.fitas_reproduzidas
+		if fr is Dictionary and fr.has(fita_anterior) and fr[fita_anterior]:
+			return true
+		# fallback: Array antigo
+		if fr is Array and fr.has(fita_anterior):
+			return true
+	return false
+
 func _process(_delta):
-	if fita_anterior == "" or SaveManager.itens_coletados.has(fita_anterior):
+	if fita_anterior == "" or _fita_anterior_ja_tocou():
 		show()
 		set_process(false)
 

@@ -8,7 +8,22 @@ var raio_alvo     : float = 0.0
 var alpha_circulo : float = 0.0
 
 const RAIO_CIRCULO : float = 12.0
+const RAIO_PONTO   : float = 1.4   # era 2.5 ("bola") — agora é um ponto de verdade
 const VEL_ANIM     : float = 6.0
+
+# Shader que inverte a cor da tela exatamente onde a crosshair é desenhada
+# (o que tá branco atrás dela fica preto, o que tá preto fica branco, etc).
+# Só a cor entra no shader — o alpha desenhado em _draw() continua
+# controlando o formato (ponto ou anel), então as cores exportadas acima
+# (cor_normal/cor_foco) só importam pelo canal alpha delas agora.
+const SHADER_INVERTE := """
+shader_type canvas_item;
+
+void fragment() {
+	vec4 tela = texture(SCREEN_TEXTURE, SCREEN_UV);
+	COLOR.rgb = vec3(1.0) - tela.rgb;
+}
+"""
 
 # Cenas onde a crosshair NUNCA deve aparecer
 const CENAS_SEM_CROSSHAIR := [
@@ -33,6 +48,13 @@ func _ready():
 	rect_size     = Vector2(100.0, 100.0)
 	rect_pivot_offset = rect_size / 2.0
 	mouse_filter  = Control.MOUSE_FILTER_IGNORE
+
+	var shader := Shader.new()
+	shader.code = SHADER_INVERTE
+	var mat := ShaderMaterial.new()
+	mat.shader = shader
+	material = mat
+
 	_atualizar_visibilidade()
 
 func _process(delta):
@@ -91,7 +113,7 @@ func _draw():
 	# Assim some de verdade dentro do círculo de interação.
 	if alpha_circulo < 0.2:
 		var t = 1.0 - (alpha_circulo / 0.2)
-		var raio_ponto = 2.5 * t
+		var raio_ponto = RAIO_PONTO * t
 		if raio_ponto > 0.15:
 			var cor_p = cor_normal
 			cor_p.a = cor_normal.a * t

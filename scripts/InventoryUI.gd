@@ -10,6 +10,18 @@ onready var container = $VBoxContainer
 var _removendo: Array = []
 
 func _ready():
+	# ---------------------------------------------------------------
+	# APOSENTADA: a lista de texto que abria com [TAB] foi substituída
+	# pela tela estilo PS1 (InventoryViewerUI.gd — item 3D girando,
+	# [A]/[D] pra trocar). O arquivo continua aqui (autoload intacto,
+	# nada mais depende dele) só desligado, caso queira reverter um dia
+	# — é só apagar este "return" e o bloco acima dele.
+	# ---------------------------------------------------------------
+	visible = false
+	set_process(false)
+	set_process_input(false)
+	return
+
 	if Global.rodando_como_menu_bg:
 		queue_free()
 		return
@@ -79,12 +91,21 @@ func _input(event):
 		get_tree().set_input_as_handled()
 		return
 
-	# Tecla C → inventário de cartas (CartasInventoryUI)
-	if event is InputEventKey and event.pressed and not event.echo and event.scancode == KEY_C:
+	# Tecla C / action "c" → inventário de cartas (CartasInventoryUI)
+	var apertou_c := false
+	if event.is_action_pressed("c"):
+		apertou_c = true
+	elif event is InputEventKey and event.pressed and not event.echo and event.scancode == KEY_C:
+		apertou_c = true
+	if apertou_c:
 		if typeof(Global) != TYPE_NIL and Global.get("rodando_como_menu_bg"):
 			return
 		var ui = _pegar_cartas_inv_ui()
 		if ui == null:
+			# Cena não está na árvore — falta Autoload da CartasInventory.tscn
+			_flash_dica("CartasInventoryUI não encontrado (Autoload?)")
+			print("[InventoryUI] CartasInventoryUI não está na árvore. Adicione a CENA CartasInventory.tscn como Autoload.")
+			get_tree().set_input_as_handled()
 			return
 		# Se a própria UI já está aberta, ela mesma cuida do C / ESC
 		if ui.get("esta_aberta") == true:

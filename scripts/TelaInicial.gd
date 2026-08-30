@@ -27,11 +27,10 @@ func _tocar_intro():
 	yield(get_tree().create_timer(TEMPO_PRE_LOGO), "timeout")
 	tela_preta.visible = false
 
-	if Global.video_tem_conteudo(video_logo):
-		video_logo.visible = true
-		video_logo.play()
-		yield(video_logo, "finished")
-		video_logo.visible = false
+	video_logo.visible = true
+	video_logo.play()
+	yield(video_logo, "finished")
+	video_logo.visible = false
 
 	tela_preta.visible = true
 	yield(get_tree().create_timer(TEMPO_POS_LOGO), "timeout")

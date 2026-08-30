@@ -6,12 +6,9 @@ var caminho_atual = ""
 
 func _ready():
 	_limpar_ui_orfan()
-	if Global.video_tem_conteudo(video_loading):
-		video_loading.connect("finished", self, "_on_video_loading_finished")
-		video_loading.visible = true
-		video_loading.play()
-	else:
-		video_loading.visible = false
+	video_loading.connect("finished", self, "_on_video_loading_finished")
+	video_loading.visible = true
+	video_loading.play()
 	_iniciar_load(Global.cena_destino)
 
 func _limpar_ui_orfan() -> void:
@@ -30,12 +27,6 @@ func _iniciar_load(caminho):
 	caminho_atual = caminho
 	carregando = true
 	loader = ResourceLoader.load_interactive(caminho)
-	if loader == null:
-		# Sem loader nao existe _process pra concluir: iria travar aqui pra sempre.
-		push_error("Nao consegui abrir: " + caminho)
-		carregando = false
-		get_tree().change_scene(caminho)
-		return
 	set_process(true)
 
 func _process(delta):
@@ -57,4 +48,3 @@ func _process(delta):
 		push_error("Erro ao carregar: " + caminho_atual)
 		loader = null
 		carregando = false
-		get_tree().change_scene("res://scenes/MainMenu.tscn")

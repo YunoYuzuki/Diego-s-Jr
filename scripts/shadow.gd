@@ -74,6 +74,9 @@ export var look_delay_variation : float = 0.25
 # Movimento
 export var velocidade_drift : float = 2.0
 export var velocidade_drift_f0_multiplier : float = 1.9
+# Aproximação real (Modo.APROXIMAR): bem lenta, quase imperceptível
+export var velocidade_aproximar : float = 0.18
+export var velocidade_aproximar_olhando : float = 0.10
 export var dist_minima_player : float = 1.7
 export var nav_recalculo_intervalo : float = 0.35
 
@@ -92,10 +95,10 @@ export var chance_bater_porta : float = 0.12
 export var chance_trancar_porta : float = 0.02  # quase nunca prende o jogador
 export(AudioStream) var som_bater_porta
 
-export var chance_piscar_lanterna : float = 0.10
-export var chance_piscar_lanterna_f0_bonus : float = 0.03
-export var chance_piscar_ambiente : float = 0.008
-export var intervalo_checagem_ambiente : float = 35.0
+export var chance_piscar_lanterna : float = 0.05
+export var chance_piscar_lanterna_f0_bonus : float = 0.02
+export var chance_piscar_ambiente : float = 0.003
+export var intervalo_checagem_ambiente : float = 55.0
 
 # Stare down RARO
 export var chance_stare_down : float = 0.03
@@ -201,6 +204,8 @@ export var tempo_pra_refugio : float = 14.0      # segundos pra chegar em ZonaLu
 export var blackout_duracao_min : float = 60.0
 export var blackout_duracao_max : float = 90.0
 export var velocidade_caca : float = 10.5   # um pouco mais lenta = tempo de reação
+# Caçada atravessa paredes (entidade, não NPC) — contato ainda por distância
+export var caca_atravessa_paredes : bool = true
 # Frente vs atrás
 export var chance_caca_pela_frente : float = 0.55
 # Caça: nasce NA FRENTE ou ATRÁS do player (5–8 m) — nunca em cima / fora da casa
@@ -336,6 +341,8 @@ var _audio_ameaca_bloqueado_ate : float = 0.0
 
 # Caçada / blackout
 var _cacando : bool = false
+var _collision_mask_backup : int = -1
+var _collision_layer_backup : int = -1
 var _caca_pela_frente : bool = false
 var _tempo_caca : float = 0.0
 var _blackout_ativo : bool = false
@@ -1123,7 +1130,7 @@ func _physics_process(delta: float) -> void:
 				_vel.z = 0.0
 		elif _modo_atual == Modo.APROXIMAR:
 			# Mesmo olhando: continua se aproximando (mais lento) — não fica travada no mesmo canto
-			_mover_em_direcao_do_player(player, velocidade_drift * 0.55)
+			_mover_em_direcao_do_player(player, velocidade_aproximar_olhando)
 		else:
 			# OBSERVAR / FLASH: parada, só olhando
 			_vel.x = 0.0
@@ -1134,10 +1141,10 @@ func _physics_process(delta: float) -> void:
 
 		# Só se move no modo APROXIMAR (e não em OBSERVAR/FLASH/IGNORAR)
 		if _modo_atual == Modo.APROXIMAR:
-			var f = _get_fase()
-			var speed = velocidade_drift
-			if f == 0:
-				speed *= velocidade_drift_f0_multiplier
+			# Quase imperceptível — fase 0 um pouco menos lenta
+			var speed = velocidade_aproximar
+			if _get_fase() == 0:
+				speed = min(velocidade_aproximar * 1.35, 0.28)
 			_mover_em_direcao_do_player(player, speed)
 		else:
 			# OBSERVAR / FLASH / etc: trava no lugar
@@ -1281,6 +1288,7 @@ func _sumir(permitir_efeito_saida: bool) -> void:
 
 	hide()
 	_ativo = false
+	_ativar_atravessar_paredes_caca(false)
 	_cacando = false
 	_piscando = false
 	_stare_down_ativo = false
@@ -1472,7 +1480,14 @@ func _aplicar_alteracao_ambiental() -> void:
 	if not _desbloqueada or _cacando or _ativo:
 		return
 
-	var pool = ["luz_distante", "lamp_maluca", "porta_longe", "nada_ambiental", "nada_ambiental"]
+	# Luzes / piscar bem raros: a casa quase nunca mexe em luz sozinha
+	# (antes piscava o tempo todo e ficava ruim). Peso alto em nada/porta.
+	var pool = ["porta_longe", "nada_ambiental", "nada_ambiental", "nada_ambiental", "nada_ambiental", "nada_ambiental"]
+	# Chance baixa de incluir evento de luz nesta alteração
+	if randf() < 0.12:
+		pool.append("luz_distante")
+	if randf() < 0.06:
+		pool.append("lamp_maluca")
 	if _ultima_alteracao_tipo != "" and pool.has(_ultima_alteracao_tipo):
 		pool.erase(_ultima_alteracao_tipo)
 
@@ -1908,6 +1923,7 @@ func iniciar_caca() -> void:
 	_tempo_caca = 0.0
 	_quer_sumir = false
 	_nav_timer_acumulado = 0.0
+	_ativar_atravessar_paredes_caca(true)
 	_mudar_estado(EstadoSombra.MANIFEST)
 	_ativo = true
 	show()
@@ -2183,8 +2199,11 @@ func _processar_caca(delta: float) -> void:
 			# Path “parado” (próximo ponto colado nela) enquanto player ainda longe → ignora
 			if dir_move.length() < 0.12 and dist > 1.2:
 				dir_move = Vector3.ZERO
+	# Atravessando paredes: sempre linha reta pro player (navmesh só atrapalha)
+	if caca_atravessa_paredes:
+		dir_move = dir
 	# Fallback SEMPRE: sem path útil, corre em linha reta atrás do player (qualquer distância)
-	if dir_move.length() < 0.08:
+	elif dir_move.length() < 0.08:
 		dir_move = dir
 	if dir_move.length() > 0.05:
 		dir_move = dir_move.normalized()
@@ -2207,13 +2226,18 @@ func _processar_caca(delta: float) -> void:
 
 	# Sem gravidade — trava Y no chão/navmesh
 	_vel.y = 0.0
-	move_and_slide(_vel, Vector3.UP)
+	if caca_atravessa_paredes:
+		# Entidade: atravessa paredes em linha reta até o player
+		global_translate(Vector3(_vel.x * delta, 0.0, _vel.z * delta))
+	else:
+		move_and_slide(_vel, Vector3.UP)
 	_travar_no_chao()
 
 	# Segurança: caça não pode continuar fora da casa
 	if not _posicao_ainda_interna():
 		print("⚠️ Caça abortada — sombra saiu da área interna")
 		_vel = Vector3.ZERO
+		_ativar_atravessar_paredes_caca(false)
 		_cacando = false
 		_sumir(false)
 		return
@@ -2292,6 +2316,7 @@ func _collider_eh_player(c: Node, player: Node) -> bool:
 func _impacto_caca() -> void:
 	# Contato na caçada = tela preta → crise
 	print("💀 IMPACTO DA CAÇADA — tela preta + crise!")
+	_ativar_atravessar_paredes_caca(false)
 	_cacando = false
 	_tempo_caca = 0.0
 	if _sfx_player and _sfx_player.playing:
@@ -2325,6 +2350,7 @@ func _impacto_caca() -> void:
 	_sumir(false)
 
 func _encerrar_caca(escapou: bool) -> void:
+	_ativar_atravessar_paredes_caca(false)
 	_cacando = false
 	_tempo_caca = 0.0
 	_caca_pela_frente = false
@@ -3071,6 +3097,27 @@ func _listar_spawns_internos() -> Array:
 ## 2) precisa estar razoavelmente perto de algum ShadowSpawnPoint interno
 ## Se falhar, tenta o spawn interno mais próximo da posição desejada.
 ## Retorna Vector3 válido ou null se não houver nenhum ponto interno.
+
+func _ativar_atravessar_paredes_caca(ativo: bool) -> void:
+	if not caca_atravessa_paredes and ativo:
+		return
+	if ativo:
+		if _collision_mask_backup < 0:
+			_collision_mask_backup = collision_mask
+			_collision_layer_backup = collision_layer
+		# Não colide com cenário — só "existe" pra lógica de contato por distância
+		collision_mask = 0
+		# Mantém layer 0 também evita empurrar o player fisicamente
+		collision_layer = 0
+		print("💀 Caça: atravessando paredes (collision off)")
+	else:
+		if _collision_mask_backup >= 0:
+			collision_mask = _collision_mask_backup
+			collision_layer = _collision_layer_backup
+			_collision_mask_backup = -1
+			_collision_layer_backup = -1
+			print("💀 Caça: colisão restaurada")
+
 func _forcar_posicao_interna(pos_desejada: Vector3, raio_max: float = 6.0):
 	var pos_nav = _snap_ao_navmesh(pos_desejada)
 	var no_mesh = _pos_esta_no_navmesh(pos_nav, pos_desejada)

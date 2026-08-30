@@ -7,6 +7,8 @@ var tab_mostrado        : bool = false
 var ctrl_mostrado       : bool = false
 var emocao_mostrado     : bool = false
 var sair_quarto_mostrado: bool = false
+var correr_mostrado    : bool = false
+var cartas_mostrado    : bool = false
 
 var exibindo           : bool = false
 var fila               : Array = []
@@ -177,7 +179,7 @@ func limpar_ui_ao_sair() -> void:
 
 func esconder_para_pause() -> void:
 	# Não fecha o tutorial de emoção a meio se estiver esperando input —
-	# só esconde UI de dicas pra não ficar por cima do pause / CartasUI.
+	# só esconde UI de dicas pra não ficar por cima do pause.
 	if label:
 		label.modulate.a = 0.0
 	if canvas:
@@ -191,28 +193,6 @@ func esconder_para_pause() -> void:
 		label_legenda.visible = false
 		label_legenda.modulate.a = 0.0
 
-
-func mostrar_apos_pause() -> void:
-	# Chamado quando CartasUI fecha (ou unpause). Só retoma a fila de dicas.
-	if get_tree().paused:
-		return
-	if _cartas_ui_aberta():
-		return
-	_processar_fila()
-
-
-func _cartas_ui_aberta() -> bool:
-	# get() seguro no Godot 3 — "x" in obj quebra se o autoload ainda for null
-	if typeof(CartasUI) != TYPE_NIL and is_instance_valid(CartasUI):
-		if CartasUI.get("esta_aberta") == true:
-			return true
-	if not is_inside_tree():
-		return false
-	for n in get_tree().get_nodes_in_group("cartas_ui"):
-		if is_instance_valid(n) and n.get("esta_aberta") == true:
-			return true
-	return false
-
 # ==================== SAVE / LOAD ====================
 
 func save_data() -> Dictionary:
@@ -223,6 +203,8 @@ func save_data() -> Dictionary:
 		"ctrl_mostrado"        : ctrl_mostrado,
 		"emocao_mostrado"      : emocao_mostrado,
 		"sair_quarto_mostrado" : sair_quarto_mostrado,
+		"correr_mostrado"      : correr_mostrado,
+		"cartas_mostrado"      : cartas_mostrado,
 	}
 
 func load_data(data: Dictionary) -> void:
@@ -232,6 +214,8 @@ func load_data(data: Dictionary) -> void:
 	ctrl_mostrado        = data.get("ctrl_mostrado", false)
 	emocao_mostrado      = data.get("emocao_mostrado", false)
 	sair_quarto_mostrado = data.get("sair_quarto_mostrado", false)
+	correr_mostrado      = data.get("correr_mostrado", false)
+	cartas_mostrado      = data.get("cartas_mostrado", false)
 	fila.clear()
 	exibindo = false
 	_esperando_input_emocao = false
@@ -267,6 +251,22 @@ func tutorial_agachar():
 	ctrl_mostrado = true
 	fila.append("*delay*")
 	fila.append("Segure \"CTRL\" para se agachar")
+	_processar_fila()
+
+func tutorial_correr():
+	if correr_mostrado:
+		return
+	correr_mostrado = true
+	fila.append("*delay*")
+	fila.append("Pressione \"Shift\" para correr")
+	_processar_fila()
+
+func tutorial_cartas():
+	if cartas_mostrado:
+		return
+	cartas_mostrado = true
+	fila.append("*delay*")
+	fila.append("Pressione \"C\" para abrir o inventário de coletáveis")
 	_processar_fila()
 
 # ==================== TUTORIAL DE EMOÇÃO (tela) ====================
@@ -377,9 +377,6 @@ func _processar_fila():
 		return
 	if _esperando_input_emocao:
 		return
-	# Não mostra dicas por cima da leitura de carta
-	if _cartas_ui_aberta():
-		return
 	exibindo = true
 	_exibir_proximo()
 
@@ -387,7 +384,7 @@ func _exibir_proximo():
 	if fila.empty():
 		exibindo = false
 		return
-	if get_tree().paused or _esperando_input_emocao or _cartas_ui_aberta():
+	if get_tree().paused or _esperando_input_emocao:
 		exibindo = false
 		return
 	if canvas:

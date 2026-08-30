@@ -59,6 +59,9 @@ var itens_coletados : Array = []
 
 # dentro do SaveManager.gd
 var fitas_reproduzidas = {}
+# nome_fita -> {fita_audio_path, fita_texto, fita_cor_*, fita_e_calmante}
+# Persiste o áudio de cada fita coletada pra nunca voltar "em branco" no load.
+var fitas_dados = {}
 
 # ----- Integração com o site (API Railway) -----
 const WEB_API_URL := "https://limbo-of-memories-production.up.railway.app/api"
@@ -84,6 +87,7 @@ var resolucoes_disponiveis: Array = []       # cada item: {"label": String, "shr
 var _viewport_container_atual: ViewportContainer = null
 
 var sensibilidade_mouse: float = 1.0
+var inverter_mouse_y: bool = false
 
 func _ready():
 	pause_mode = Node.PAUSE_MODE_PROCESS
@@ -142,6 +146,28 @@ func marcar_item_coletado(id_unico: String) -> void:
 
 func marcar_fita_reproduzida(nome: String):
 	fitas_reproduzidas[nome] = true
+
+
+## Guarda path/texto/cor da fita pelo nome (coleta ou início da reprodução).
+func registrar_fita_audio(nome: String, path: String, texto: String = "", cor = null, calmante: bool = false) -> void:
+	if nome == null or str(nome) == "":
+		return
+	nome = str(nome)
+	if not fitas_dados.has(nome):
+		fitas_dados[nome] = {}
+	var d = fitas_dados[nome]
+	if path != null and str(path) != "":
+		d["fita_audio_path"] = str(path)
+	if texto != null and str(texto) != "":
+		d["fita_texto"] = str(texto)
+	if cor != null and cor is Color:
+		d["fita_cor_r"] = cor.r
+		d["fita_cor_g"] = cor.g
+		d["fita_cor_b"] = cor.b
+		d["fita_cor_a"] = cor.a
+	d["fita_e_calmante"] = calmante
+	fitas_dados[nome] = d
+	print("[SaveManager] registrar_fita_audio '%s' path=%s" % [nome, d.get("fita_audio_path", "")])
 	sincronizar_progresso_web()
 
 func _pegar_id(node: Node) -> String:
@@ -179,7 +205,10 @@ func save_game(slot: int) -> bool:
 		},
 		"itens_coletados": itens_coletados.duplicate(),
 		"fitas_reproduzidas": fitas_reproduzidas.duplicate(),
+		"fitas_dados": fitas_dados.duplicate(true),
 		"playtime_seconds": get_playtime_seconds(),
+		"capitulo": _capitulo_por_progresso(fitas_reproduzidas, itens_coletados),
+
 		"quarto_laura": {},
 		"inventario": [],
 		"cartas": [],
@@ -210,6 +239,95 @@ func save_game(slot: int) -> bool:
 
 	if typeof(CartasInventory) != TYPE_NIL and CartasInventory.has_method("get_save_data"):
 		dados_do_save["cartas"] = CartasInventory.get_save_data()
+		print("[SaveManager] Salvando cartas: %s" % str(dados_do_save["cartas"]))
+
+	# Snapshot da fita no inventário (nunca perde áudio).
+	dados_do_save["fita_inventario"] = {}
+	var nome_f := ""
+	var path_f := ""
+	var texto_f := ""
+	var cor_r := 1.0
+	var cor_g := 1.0
+	var cor_b := 1.0
+	var cor_a := 1.0
+	var calmante_f := false
+
+	# 1) Câmera do player (fita ainda no inventário)
+	for node in get_tree().get_nodes_in_group("player"):
+		var cam = node.get_node_or_null("Camera")
+		if cam == null:
+			continue
+		nome_f = str(cam.get("fita_nome") if cam.get("fita_nome") != null else "")
+		if "fita_audio_path" in cam and str(cam.fita_audio_path) != "":
+			path_f = str(cam.fita_audio_path)
+		elif cam.get("fita_audio") and cam.fita_audio:
+			path_f = str(cam.fita_audio.resource_path)
+		texto_f = str(cam.get("fita_texto") if cam.get("fita_texto") != null else "")
+		if "fita_cor" in cam and cam.fita_cor is Color:
+			cor_r = float(cam.fita_cor.r)
+			cor_g = float(cam.fita_cor.g)
+			cor_b = float(cam.fita_cor.b)
+			cor_a = float(cam.fita_cor.a)
+		if "fita_e_calmante" in cam:
+			calmante_f = bool(cam.fita_e_calmante)
+		break
+
+	# 2) Gravador tocando → API pública (fonte da verdade no meio da reprodução)
+	for g in get_tree().get_nodes_in_group("gravador"):
+		if not is_instance_valid(g):
+			continue
+		if not ("fita_tocando" in g and g.fita_tocando):
+			continue
+		var snap = {}
+		if g.has_method("get_fita_em_reproducao"):
+			snap = g.get_fita_em_reproducao()
+		if typeof(snap) == TYPE_DICTIONARY and not snap.empty():
+			if str(snap.get("fita_nome", "")) != "":
+				nome_f = str(snap["fita_nome"])
+			if str(snap.get("fita_audio_path", "")) != "":
+				path_f = str(snap["fita_audio_path"])
+			if str(snap.get("fita_texto", "")) != "":
+				texto_f = str(snap["fita_texto"])
+			cor_r = float(snap.get("fita_cor_r", cor_r))
+			cor_g = float(snap.get("fita_cor_g", cor_g))
+			cor_b = float(snap.get("fita_cor_b", cor_b))
+			cor_a = float(snap.get("fita_cor_a", cor_a))
+			calmante_f = bool(snap.get("fita_e_calmante", calmante_f))
+			print("[SaveManager] Snapshot gravador: '%s' path=%s" % [nome_f, path_f])
+		break
+
+	# 3) Completa path/texto pelo registro persistente fitas_dados
+	if nome_f != "" and fitas_dados.has(nome_f):
+		var reg = fitas_dados[nome_f]
+		if path_f == "" and str(reg.get("fita_audio_path", "")) != "":
+			path_f = str(reg["fita_audio_path"])
+		if texto_f == "" and str(reg.get("fita_texto", "")) != "":
+			texto_f = str(reg["fita_texto"])
+		if not calmante_f and reg.get("fita_e_calmante", false):
+			calmante_f = true
+
+	# 4) Se só temos path no registry e inventário tem fita (ou tocando), usa último registro
+	if (nome_f == "" or path_f == "") and typeof(Inventory) != TYPE_NIL and Inventory.has_item("fita_cassete"):
+		# pega qualquer entrada recente do registry se câmera vazia
+		pass
+
+	if nome_f != "" or path_f != "":
+		dados_do_save["fita_inventario"] = {
+			"fita_nome": nome_f,
+			"fita_audio_path": path_f,
+			"fita_texto": texto_f,
+			"fita_cor_r": cor_r,
+			"fita_cor_g": cor_g,
+			"fita_cor_b": cor_b,
+			"fita_cor_a": cor_a,
+			"fita_e_calmante": calmante_f,
+		}
+		# Atualiza registry também
+		if nome_f != "":
+			registrar_fita_audio(nome_f, path_f, texto_f, Color(cor_r, cor_g, cor_b, cor_a), calmante_f)
+		print("[SaveManager] fita_inventario salvo: %s" % str(dados_do_save["fita_inventario"]))
+	else:
+		print("[SaveManager] AVISO: nenhuma fita pra gravar em fita_inventario")
 
 	if typeof(TutorialManager) != TYPE_NIL and TutorialManager.has_method("save_data"):
 		dados_do_save["tutorial_manager"] = TutorialManager.save_data()
@@ -287,6 +405,7 @@ func iniciar_novo_jogo() -> void:
 	slot_ativo = false
 	itens_coletados.clear()
 	fitas_reproduzidas.clear()
+	fitas_dados.clear()
 	cutscene_inicial_vista = false
 	if typeof(Inventory) != TYPE_NIL and Inventory.has_method("clear"):
 		Inventory.clear()
@@ -339,6 +458,9 @@ func carregar_dados(slot: int) -> bool:
 	cutscene_inicial_vista = flags.get("cutscene_inicial_vista", false)
 	itens_coletados = dados_do_save.get("itens_coletados", [])
 	fitas_reproduzidas = dados_do_save.get("fitas_reproduzidas", {})
+	fitas_dados = dados_do_save.get("fitas_dados", {})
+	if typeof(fitas_dados) != TYPE_DICTIONARY:
+		fitas_dados = {}
 	var _pt_salvo = int(dados_do_save.get("playtime_seconds", 0))
 	if typeof(QuartoLaura) != TYPE_NIL and QuartoLaura.has_method("load_save_data"):
 		QuartoLaura.load_save_data(dados_do_save.get("quarto_laura", {}))
@@ -347,7 +469,9 @@ func carregar_dados(slot: int) -> bool:
 		Inventory.apply_save_data(dados_do_save["inventario"])
 
 	if typeof(CartasInventory) != TYPE_NIL and CartasInventory.has_method("apply_save_data"):
-		CartasInventory.apply_save_data(dados_do_save.get("cartas", []))
+		var _cartas_data = dados_do_save.get("cartas", [])
+		CartasInventory.apply_save_data(_cartas_data)
+		print("[SaveManager] Cartas restauradas: %d" % CartasInventory.quantidade())
 
 	if dados_do_save.has("tutorial_manager") and typeof(TutorialManager) != TYPE_NIL:
 		TutorialManager.load_data(dados_do_save["tutorial_manager"])
@@ -417,22 +541,115 @@ func carregar_dados(slot: int) -> bool:
 					item.ligar()
 				break
 
-	var fita_nome_salva = dados_player.get("fita_nome", "")
-	if fita_nome_salva != "" and player_node:
+	# Dados da fita: prioriza bloco dedicado, depois registry, depois player
+	var fita_blob = dados_do_save.get("fita_inventario", {})
+	if typeof(fita_blob) != TYPE_DICTIONARY:
+		fita_blob = {}
+	if fita_blob.empty() and typeof(dados_player) == TYPE_DICTIONARY:
+		fita_blob = dados_player
+
+	var fita_nome_salva = str(fita_blob.get("fita_nome", ""))
+	var fita_audio_path_salva = str(fita_blob.get("fita_audio_path", ""))
+	var fita_texto_salva = str(fita_blob.get("fita_texto", ""))
+	var fita_calmante_salva = bool(fita_blob.get("fita_e_calmante", false))
+	var fita_cor_salva = Color(
+		float(fita_blob.get("fita_cor_r", 1.0)),
+		float(fita_blob.get("fita_cor_g", 1.0)),
+		float(fita_blob.get("fita_cor_b", 1.0)),
+		float(fita_blob.get("fita_cor_a", 1.0))
+	)
+
+	# Completa pelo registry persistente (fitas_dados)
+	if fita_nome_salva != "" and fitas_dados.has(fita_nome_salva):
+		var reg = fitas_dados[fita_nome_salva]
+		if fita_audio_path_salva == "" and str(reg.get("fita_audio_path", "")) != "":
+			fita_audio_path_salva = str(reg["fita_audio_path"])
+		if fita_texto_salva == "" and str(reg.get("fita_texto", "")) != "":
+			fita_texto_salva = str(reg["fita_texto"])
+		if reg.has("fita_cor_r"):
+			fita_cor_salva = Color(
+				float(reg.get("fita_cor_r", 1.0)),
+				float(reg.get("fita_cor_g", 1.0)),
+				float(reg.get("fita_cor_b", 1.0)),
+				float(reg.get("fita_cor_a", 1.0))
+			)
+		fita_calmante_salva = bool(reg.get("fita_e_calmante", fita_calmante_salva))
+
+	# Se inventário tem fita mas blob vazio, tenta última entrada do registry
+	if (fita_nome_salva == "" or fita_audio_path_salva == "") and typeof(Inventory) != TYPE_NIL and Inventory.has_item("fita_cassete"):
+		for k in fitas_dados.keys():
+			# se a fita ainda NÃO foi marcada como reproduzida, é candidata
+			var ja_tocou = fitas_reproduzidas.has(k) and fitas_reproduzidas[k]
+			if ja_tocou:
+				continue
+			var reg2 = fitas_dados[k]
+			fita_nome_salva = str(k)
+			fita_audio_path_salva = str(reg2.get("fita_audio_path", ""))
+			fita_texto_salva = str(reg2.get("fita_texto", ""))
+			fita_calmante_salva = bool(reg2.get("fita_e_calmante", false))
+			if reg2.has("fita_cor_r"):
+				fita_cor_salva = Color(
+					float(reg2.get("fita_cor_r", 1.0)),
+					float(reg2.get("fita_cor_g", 1.0)),
+					float(reg2.get("fita_cor_b", 1.0)),
+					float(reg2.get("fita_cor_a", 1.0))
+				)
+			print("[SaveManager] Fita recuperada do registry: '%s'" % fita_nome_salva)
+			break
+
+	# Aplica na câmera
+	if player_node and (fita_nome_salva != "" or fita_audio_path_salva != ""):
 		var cam = player_node.get_node_or_null("Camera")
 		if cam:
 			cam.fita_nome = fita_nome_salva
-			var fita_audio_path_salva = dados_player.get("fita_audio_path", "")
+			if "fita_audio_path" in cam:
+				cam.fita_audio_path = fita_audio_path_salva
+			cam.fita_texto = fita_texto_salva
+			if "fita_cor" in cam:
+				cam.fita_cor = fita_cor_salva
+			if "fita_e_calmante" in cam:
+				cam.fita_e_calmante = fita_calmante_salva
+			# Carrega o stream — tenta path direto e depois ResourceLoader
+			var stream = null
 			if fita_audio_path_salva != "":
-				cam.fita_audio = load(fita_audio_path_salva)
-			cam.fita_texto = dados_player.get("fita_texto", "")
-			cam.fita_cor = Color(
-				dados_player.get("fita_cor_r", 1.0),
-				dados_player.get("fita_cor_g", 1.0),
-				dados_player.get("fita_cor_b", 1.0),
-				dados_player.get("fita_cor_a", 1.0)
-			)
-			cam.fita_e_calmante = dados_player.get("fita_e_calmante", false)
+				if ResourceLoader.exists(fita_audio_path_salva):
+					stream = load(fita_audio_path_salva)
+				else:
+					stream = ResourceLoader.load(fita_audio_path_salva, "", true)
+			if stream:
+				cam.fita_audio = stream
+				print("[SaveManager] Fita restaurada completa: '%s' path=%s stream=%s" % [fita_nome_salva, fita_audio_path_salva, stream])
+			else:
+				push_warning("[SaveManager] Não carregou áudio da fita: nome=%s path=%s" % [fita_nome_salva, fita_audio_path_salva])
+			# Garante registry
+			registrar_fita_audio(fita_nome_salva, fita_audio_path_salva, fita_texto_salva, fita_cor_salva, fita_calmante_salva)
+
+	# Inventário DEVE ter a fita se temos dados (save no meio da reprodução)
+	if typeof(Inventory) != TYPE_NIL and (fita_nome_salva != "" or fita_audio_path_salva != ""):
+		if not Inventory.has_item("fita_cassete"):
+			Inventory.add_item("fita_cassete")
+			print("[SaveManager] Fita recolocada no inventário após load.")
+
+	# Sanity: inventário tem fita mas câmera sem áudio
+	if typeof(Inventory) != TYPE_NIL and Inventory.has_item("fita_cassete"):
+		if player_node:
+			var cam2 = player_node.get_node_or_null("Camera")
+			if cam2 and (cam2.fita_audio == null or str(cam2.fita_nome) == ""):
+				# Última tentativa: qualquer registry
+				for k3 in fitas_dados.keys():
+					var reg3 = fitas_dados[k3]
+					var p3 = str(reg3.get("fita_audio_path", ""))
+					if p3 == "":
+						continue
+					cam2.fita_nome = str(k3)
+					cam2.fita_audio_path = p3
+					cam2.fita_texto = str(reg3.get("fita_texto", ""))
+					if ResourceLoader.exists(p3):
+						cam2.fita_audio = load(p3)
+					print("[SaveManager] Fallback final fita: '%s' path=%s" % [k3, p3])
+					break
+				if cam2.fita_audio == null:
+					push_warning("[SaveManager] Inventário tem fita_cassete mas NÃO foi possível restaurar o áudio.")
 
 	auto_save_timer.start()
 	get_tree().paused = false
@@ -473,16 +690,124 @@ func get_slot_info(slot: int) -> Dictionary:
 	var path = _get_save_path(slot)
 	var file = File.new()
 	if not file.file_exists(path):
-		return {"empty": true, "date": "", "time": ""}
+		return {
+			"empty": true,
+			"date": "",
+			"time": "",
+			"capitulo": "",
+			"playtime": "",
+			"fitas": 0,
+		}
 	var modified_time = file.get_modified_time(path)
 	var datetime = OS.get_datetime_from_unix_time(
 		modified_time + (OS.get_time_zone_info()["bias"] * 60)
 	)
-	return {
+	var info = {
 		"empty": false,
 		"date": "%02d/%02d/%d" % [datetime.day, datetime.month, datetime.year],
-		"time": "%02d:%02d" % [datetime.hour, datetime.minute]
+		"time": "%02d:%02d" % [datetime.hour, datetime.minute],
+		"capitulo": "O Limbo",
+		"playtime": "",
+		"fitas": 0,
 	}
+	# Lê metadados do JSON do save
+	if file.open(path, File.READ) == OK:
+		var texto = file.get_as_text()
+		file.close()
+		var dados = parse_json(texto)
+		if typeof(dados) == TYPE_DICTIONARY:
+			var pt = int(dados.get("playtime_seconds", 0))
+			info["playtime"] = _format_playtime(pt)
+			var fr = dados.get("fitas_reproduzidas", {})
+			var ic = dados.get("itens_coletados", [])
+			info["fitas"] = _contar_fitas_progresso(fr, ic)
+			info["capitulo"] = _capitulo_por_progresso(fr, ic)
+			if dados.has("capitulo") and str(dados["capitulo"]) != "":
+				info["capitulo"] = str(dados["capitulo"])
+	return info
+
+
+func _format_playtime(secs: int) -> String:
+	secs = max(secs, 0)
+	var h = int(secs / 3600)
+	var m = int((secs % 3600) / 60)
+	if h > 0:
+		return "%dh %02dm" % [h, m]
+	return "%d min" % m
+
+
+func _contar_fitas_progresso(fr, ic) -> int:
+	var n = 0
+	if typeof(fr) == TYPE_DICTIONARY:
+		for k in fr.keys():
+			if fr[k]:
+				n += 1
+	elif typeof(fr) == TYPE_ARRAY:
+		n = fr.size()
+	# fallback: itens coletados com "fita" no nome
+	if n == 0 and typeof(ic) == TYPE_ARRAY:
+		for item in ic:
+			var s = str(item).to_lower()
+			if "fita" in s:
+				n += 1
+	return n
+
+
+## Títulos de capítulo alinhados à progressão das fitas (história da Laura).
+func _capitulo_por_progresso(fr, ic) -> String:
+	var nomes_ordem = [
+		"Fita 01 - Primeiro Contato",
+		"Fita 02",
+		"Fita 03",
+		"Fita 04",
+		"Fita 05",
+		"Fita 06",
+		"Fita 07",
+	]
+	# Detecta quantas fitas normais já foram ouvidas / coletadas
+	var nivel = 0
+	var fontes = []
+	if typeof(fr) == TYPE_DICTIONARY:
+		for k in fr.keys():
+			if fr[k]:
+				fontes.append(str(k))
+	if typeof(ic) == TYPE_ARRAY:
+		for item in ic:
+			fontes.append(str(item))
+
+	for s in fontes:
+		var low = s.to_lower()
+		# douradas não avançam o arco principal do mesmo jeito
+		if "dourad" in low or "golden" in low:
+			continue
+		for i in range(1, 8):
+			if ("fita 0%d" % i) in low or ("fita0%d" % i) in low or ("fita %d" % i) in low or ("fita%d" % i) in low:
+				nivel = max(nivel, i)
+			# nomes parciais
+			if i == 1 and ("primeiro contato" in low or "pais" in low):
+				nivel = max(nivel, 1)
+
+	var titulos = {
+		0: "Chegada ao Limbo",
+		1: "Laços de Família",
+		2: "Diário Escondido",
+		3: "Ethan",
+		4: "A Escola",
+		5: "A Biblioteca",
+		6: "Paredes Finas",
+		7: "Karen",
+	}
+	# Se ouviu douradas, sufixo especial
+	var tem_dourada = false
+	for s in fontes:
+		var low = s.to_lower()
+		if "dourad" in low or "sem certo" in low or "amizade" in low:
+			tem_dourada = true
+			break
+	var base = titulos.get(nivel, "O Limbo")
+	if tem_dourada and nivel >= 6:
+		return base + " — Ecos"
+	return base
 
 
 # =====================================================================
@@ -497,6 +822,7 @@ func salvar_configuracoes() -> void:
 	config.set_value("video", "resolucao_index", resolucao_index)
 	config.set_value("video", "tela_cheia", tela_cheia)
 	config.set_value("controles", "sensibilidade_mouse", sensibilidade_mouse)
+	config.set_value("controles", "inverter_mouse_y", inverter_mouse_y)
 	config.save(CONFIG_PATH)
 
 
@@ -510,6 +836,7 @@ func carregar_configuracoes() -> void:
 		resolucao_index = config.get_value("video", "resolucao_index", 0)
 		tela_cheia = config.get_value("video", "tela_cheia", true)
 		sensibilidade_mouse = config.get_value("controles", "sensibilidade_mouse", 1.0)
+		inverter_mouse_y = config.get_value("controles", "inverter_mouse_y", false)
 	_aplicar_volumes()
 	aplicar_resolucao()
 	# Aplica na câmera se ela já existir (ex.: config aberto no meio do jogo)
@@ -869,6 +1196,7 @@ func resetar_progresso_web() -> void:
 	_web_sessao_inicio_msec = OS.get_ticks_msec()
 	_web_sessao_ativa = true
 	fitas_reproduzidas.clear()
+	fitas_dados.clear()
 	if typeof(CartasInventory) != TYPE_NIL and CartasInventory.has_method("clear"):
 		CartasInventory.clear()
 

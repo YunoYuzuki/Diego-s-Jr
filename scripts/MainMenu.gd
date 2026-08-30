@@ -1,40 +1,53 @@
 extends Control
 
 onready var music = $Theme_Title
-onready var viewport_3d = get_node_or_null("Viewport")
+onready var viewport_3d = $Viewport
 var save_ui_scene = preload("res://scenes/SaveUI.tscn")
 
 const API = "https://limbo-of-memories-production.up.railway.app/api"
+const SITE_URL := "https://limboofmemories.netlify.app"
+const SITE_RANKING_URL := "https://limboofmemories.netlify.app/#ranking"
+const CENA_LOGIN := "res://scenes/TelaLogin.tscn"
 const CONTA_CFG := "user://limbo_conta.cfg"
 
 func _ready():
-	# Voltar do jogo pro menu chega aqui com o mouse ainda CAPTURED
-	# (PauseCanvas -> unpause_game()). Cursor invisivel = menu parece travado.
-	# Restaurar aqui cobre qualquer caminho que leve ao menu.
-	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_limpar_ui_gameplay_orfan()
-	
-	$VBox_Buttons/Carregar.connect("pressed", self, "_on_Btn_Load_pressed")
-	$VBox_Buttons/Iniciar.connect("pressed", self, "_on_Btn_Iniciar_pressed")
-	$VBox_Buttons/Sair.connect("pressed",   self, "_on_Btn_Sair_pressed")
-	if has_node("VBox_Buttons/Configurar"):
-		$VBox_Buttons/Configurar.connect("pressed", self, "_on_Btn_Configurar_pressed")
-	if has_node("VBox_Buttons/Debug"):
-		$VBox_Buttons/Debug.connect("pressed", self, "_on_Debug_pressed")
-	if has_node("VBox_Buttons/Ranking"):
-		$VBox_Buttons/Ranking.connect("pressed", self, "_on_Btn_Ranking_pressed")
-	
+
+	_conectar_botao("VBox_Buttons/Carregar", "_on_Btn_Load_pressed")
+	_conectar_botao("VBox_Buttons/Iniciar", "_on_Btn_Iniciar_pressed")
+	_conectar_botao("VBox_Buttons/Sair", "_on_Btn_Sair_pressed")
+	_conectar_botao("VBox_Buttons/Configurar", "_on_Btn_Configurar_pressed")
+	_conectar_botao("VBox_Buttons/Ranking", "_on_Btn_Ranking_pressed")
+	_conectar_botao("VBox_Buttons/Conta", "_on_Btn_Conta_pressed")
+	# Se o botão ainda se chama Debug na cena, mas o texto é "Conta"
+	_conectar_botao("VBox_Buttons/Debug", "_on_Btn_Conta_pressed")
+
 	if viewport_3d:
-		viewport_3d.render_target_v_flip = true
-	
-	if music:
-		music.volume_db = -20
-		music.play()
+		# false evita a câmera/fundo 3D de cabeça pra baixo quando o CRT
+		# (PostProcess) é aplicado por cima do Viewport do menu
+		viewport_3d.render_target_v_flip = false
+		_corrigir_flip_display_viewport(viewport_3d)
+
+	music.volume_db = -20
+	music.play()
 
 	call_deferred("_garantir_camera_menu")
 	call_deferred("_atualizar_bemvindo")
 	call_deferred("_garantir_popup_logout")
+
+
+## Conecta pressed se o nó existir e ainda não estiver conectado.
+func _conectar_botao(caminho: String, metodo: String) -> void:
+	var btn = get_node_or_null(caminho)
+	if btn == null:
+		return
+	if not btn is BaseButton:
+		return
+	if btn.is_connected("pressed", self, metodo):
+		return
+	btn.connect("pressed", self, metodo)
+	print("MainMenu: conectado ", caminho, " → ", metodo)
 
 
 func _limpar_ui_gameplay_orfan() -> void:
@@ -44,6 +57,26 @@ func _limpar_ui_gameplay_orfan() -> void:
 	for n in get_tree().get_nodes_in_group("reparentar_hud"):
 		if is_instance_valid(n) and n.get_parent() == get_tree().root:
 			n.queue_free()
+
+
+## Corrige TextureRect / ViewportContainer que mostram o Viewport —
+## com CRT ativo, flip errado deixa o fundo de cabeça pra baixo.
+func _corrigir_flip_display_viewport(vp: Viewport) -> void:
+	if vp == null:
+		return
+	var parent = vp.get_parent()
+	if parent is ViewportContainer:
+		parent.stretch = true
+	_fix_flip_recursivo(self)
+
+
+func _fix_flip_recursivo(node: Node) -> void:
+	if node is TextureRect:
+		var tr: TextureRect = node
+		if tr.texture is ViewportTexture:
+			tr.flip_v = false
+	for c in node.get_children():
+		_fix_flip_recursivo(c)
 
 
 func _garantir_camera_menu() -> void:
@@ -62,45 +95,26 @@ func _garantir_camera_menu() -> void:
 
 
 func _atualizar_bemvindo() -> void:
-	var label = get_node_or_null("LabelBemVindo")
+	var label = get_node_or_null("HBoxContainer/Label")
 	if label == null:
-		# cria se não existir
-		label = Label.new()
-		label.name = "LabelBemVindo"
-		label.mouse_filter = Control.MOUSE_FILTER_STOP
-		label.anchor_left = 1.0
-		label.anchor_right = 1.0
-		label.margin_left = -360
-		label.margin_right = -16
-		label.margin_top = 16
-		label.margin_bottom = 48
-		label.align = Label.ALIGN_RIGHT
-		add_child(label)
-	# limpa conexões antigas
-	if label.is_connected("gui_input", self, "_on_bemvindo_input"):
-		label.disconnect("gui_input", self, "_on_bemvindo_input")
-	label.connect("gui_input", self, "_on_bemvindo_input")
-
-	var token_ok := false
-	if typeof(SaveManager) != TYPE_NIL and SaveManager.has_method("get_web_token"):
-		token_ok = SaveManager.get_web_token() != ""
-	var cfg := ConfigFile.new()
+		label = find_node("Label", true, false)
+	if label == null:
+		return
 	var nick := ""
+	var cfg := ConfigFile.new()
 	if cfg.load(CONTA_CFG) == OK:
 		nick = str(cfg.get_value("conta", "nickname", ""))
-		if nick == "":
-			nick = str(cfg.get_value("conta", "username", ""))
-	if token_ok and nick != "":
-		label.text = "Bem-vindo, %s" % nick
-		label.add_color_override("font_color", Color(0.35, 0.95, 0.45))
-		label.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		label.hint_tooltip = "Clique para sair da conta"
-	else:
+	if nick == "":
 		label.text = ""
-		label.mouse_default_cursor_shape = Control.CURSOR_ARROW
+		return
+	label.text = "Bem vindo, " + nick
+	# Clique no nome abre popup de sair da conta
+	if label is Control and not label.is_connected("gui_input", self, "_on_bemvindo_gui_input"):
+		label.mouse_filter = Control.MOUSE_FILTER_STOP
+		label.connect("gui_input", self, "_on_bemvindo_gui_input")
 
 
-func _on_bemvindo_input(event: InputEvent) -> void:
+func _on_bemvindo_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == BUTTON_LEFT:
 		_mostrar_popup_sair_conta()
 
@@ -148,11 +162,6 @@ func _on_Btn_Iniciar_pressed():
 	get_tree().change_scene("res://scenes/TelaCarregamento.tscn")
 
 
-func _on_Btn_Ranking_pressed():
-	if typeof(RankingUI) != TYPE_NIL and RankingUI.has_method("abrir"):
-		RankingUI.abrir()
-
-
 func _on_Btn_Load_pressed():
 	var ui = save_ui_scene.instance()
 	ui.main_menu = true
@@ -169,5 +178,25 @@ func _on_Btn_Configurar_pressed():
 	get_tree().change_scene("res://scenes/config.tscn")
 
 
+func _on_Btn_Ranking_pressed() -> void:
+	# Abre o ranking DENTRO do jogo (autoload RankingUI)
+	if typeof(RankingUI) != TYPE_NIL and RankingUI.has_method("abrir"):
+		RankingUI.abrir()
+		print("MainMenu: RankingUI.abrir()")
+	else:
+		push_warning("MainMenu: RankingUI não encontrado. Adicione RankingUI.gd como Autoload.")
+		OS.shell_open(SITE_RANKING_URL)
+
+
+func _on_Btn_Conta_pressed() -> void:
+	# Tela de login / registro da conta
+	if ResourceLoader.exists(CENA_LOGIN):
+		get_tree().change_scene(CENA_LOGIN)
+	else:
+		push_warning("MainMenu: cena de login não encontrada: %s" % CENA_LOGIN)
+		OS.shell_open(SITE_URL)
+
+
 func _on_Debug_pressed():
-	get_tree().change_scene("res://scenes/TelaLogin.tscn")
+	# Mantido por compatibilidade — agora aponta pra Conta
+	_on_Btn_Conta_pressed()

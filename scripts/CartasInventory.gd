@@ -37,6 +37,8 @@ func add_carta(id: String, nome: String, conteudo: String) -> bool:
 	cartas.append(entry)
 	emit_signal("carta_adicionada", id)
 	emit_signal("cartas_mudaram")
+	if typeof(TutorialManager) != TYPE_NIL and TutorialManager.has_method("tutorial_cartas"):
+		TutorialManager.tutorial_cartas()
 	if typeof(SaveManager) != TYPE_NIL and SaveManager.has_method("sincronizar_progresso_web"):
 		SaveManager.sincronizar_progresso_web()
 	return true

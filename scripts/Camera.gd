@@ -19,6 +19,7 @@ var fita_audio    : AudioStream = null
 var fita_nome     : String      = ""
 var fita_texto    : String      = ""
 var fita_cor      : Color       = Color(1, 1, 1, 1)
+var fita_audio_path : String      = ""
 
 var cassete_player = null
 onready var cassete_ui     = $hud/Cassette/CassetteUI
@@ -211,8 +212,6 @@ var _stamina_anterior : float = 0.0
 
 export var respiracao_pitch_fadiga : float = 1.0  # mais baixo que o de crise (1.20)
 
-
-
 func _ready():
 	add_child(tween_inspecao)
 	add_child(tween_emocao_label)
@@ -338,8 +337,7 @@ func _input(event):
 	if event is InputEventMouseButton and event.pressed \
 			and event.button_index == BUTTON_LEFT \
 			and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED \
-			and not get_tree().paused \
-			and not _cartas_ui_aberta():
+			and not get_tree().paused:
 		_interagir()
 		get_tree().set_input_as_handled()
 		return
@@ -347,7 +345,11 @@ func _input(event):
 	#  Mouse 
 	if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 		target_yaw   -= event.relative.x * mouse_sensitivity
-		target_pitch -= event.relative.y * mouse_sensitivity
+		var dy = event.relative.y * mouse_sensitivity
+		if typeof(SaveManager) != TYPE_NIL and SaveManager.inverter_mouse_y:
+			target_pitch += dy
+		else:
+			target_pitch -= dy
 		target_pitch  = clamp(target_pitch, -1.48, 1.48)
 
 		var mouse_vel = event.relative * 0.001
@@ -355,27 +357,7 @@ func _input(event):
 		holder_target_offset.y = -mouse_vel.y * holder_sway_amp * 0.7
 		holder_target_roll     = -mouse_vel.x * 0.02
 # 
-func _cartas_ui_aberta() -> bool:
-	# get() é seguro no Godot 3 — "x" in obj quebra se o autoload ainda for null
-	if typeof(CartasUI) != TYPE_NIL and is_instance_valid(CartasUI):
-		if CartasUI.get("esta_aberta") == true:
-			return true
-	if not is_inside_tree():
-		return false
-	for n in get_tree().get_nodes_in_group("cartas_ui"):
-		if is_instance_valid(n) and n.get("esta_aberta") == true:
-			return true
-	return false
-
-
 func _physics_process(delta):
-	#  Bobbing 
-	var bloqueado = bool(get_parent().get("bloqueado_por_colisao"))
-	var movendo = (Input.is_action_pressed("w") or Input.is_action_pressed("a") \
-			   or Input.is_action_pressed("d") or Input.is_action_pressed("s")) and not bloqueado
-
-	var bob_offset = Vector3.ZERO
-	var bob_roll   = 0.0
 	atualizar_foco()
 
 	if inspecionando:
@@ -385,10 +367,6 @@ func _physics_process(delta):
 		return
 		
 	if get_tree().paused:
-		return
-
-	# Lendo carta: congela input/movimento sem pausar a árvore
-	if _cartas_ui_aberta():
 		return
 
 	if Input.is_action_just_pressed("e"):
@@ -406,6 +384,13 @@ func _physics_process(delta):
 	get_parent().rotation.y = current_yaw
 	if "rot_x" in get_parent():
 		get_parent().rot_x = rad2deg(current_pitch)
+
+	#  Bobbing 
+	var movendo = Input.is_action_pressed("w") or Input.is_action_pressed("a") \
+			   or Input.is_action_pressed("d") or Input.is_action_pressed("s")
+
+	var bob_offset = Vector3.ZERO
+	var bob_roll   = 0.0
 
 	if movendo:
 		var sprint_mult = 1.6 if get_parent().is_sprinting else 1.0
@@ -810,8 +795,16 @@ func atualizar_foco():
 	if not is_in_group("camera_player"):
 		return
 
+	# No load in-game, crosshair/objeto_focado podem ser instâncias já freed
+	if crosshair != null and not is_instance_valid(crosshair):
+		crosshair = get_node_or_null("hud/CanvasLayer/CrosshairUI")
+	if objeto_focado != null and not is_instance_valid(objeto_focado):
+		objeto_focado = null
+		_foco_candidato = null
+		_foco_estavel_frames = 0
+
 	var novo: Node = null
-	if ray.is_colliding():
+	if ray and is_instance_valid(ray) and ray.is_colliding():
 		var alvo = _resolver_alvo(ray.get_collider())
 		if alvo and is_instance_valid(alvo) and alvo.is_in_group("interagivel") and alvo.has_method("set_foco"):
 			novo = alvo
@@ -820,7 +813,7 @@ func atualizar_foco():
 	if novo != null and novo == objeto_focado:
 		_foco_candidato = null
 		_foco_estavel_frames = 0
-		if crosshair:
+		if crosshair != null and is_instance_valid(crosshair) and crosshair.has_method("set_foco"):
 			crosshair.set_foco(true)
 		return
 
@@ -848,20 +841,22 @@ func atualizar_foco():
 		_foco_estavel_frames = 0
 
 	# Aplica troca estável
-	if objeto_focado and is_instance_valid(objeto_focado):
+	if objeto_focado != null and is_instance_valid(objeto_focado) and objeto_focado.has_method("set_foco"):
 		objeto_focado.set_foco(false)
 	objeto_focado = novo
 	_foco_candidato = null
 	_foco_estavel_frames = 0
 
-	if objeto_focado:
-		objeto_focado.set_foco(true)
-		if crosshair:
+	if objeto_focado != null and is_instance_valid(objeto_focado):
+		if objeto_focado.has_method("set_foco"):
+			objeto_focado.set_foco(true)
+		if crosshair != null and is_instance_valid(crosshair) and crosshair.has_method("set_foco"):
 			crosshair.set_foco(true)
 		_call_tutorial("tutorial_interagir")
 	else:
-		if crosshair:
+		if crosshair != null and is_instance_valid(crosshair) and crosshair.has_method("set_foco"):
 			crosshair.set_foco(false)
+
 
 func _resolver_alvo(alvo) -> Node:
 	if alvo == null:
@@ -955,15 +950,25 @@ func pegar_fita(fita):
 	var texto_temp     = fita.texto_legenda
 	var cor_temp       = fita.cor_legenda
 	var calmante_temp  = fita.is_in_group("cassette_music")
+	# Guarda o path ANTES de liberar a fita (resource_path some se depender do nó)
+	var path_temp := ""
+	if audio_temp:
+		path_temp = audio_temp.resource_path
+		if path_temp == "" and audio_temp.has_method("get_path"):
+			path_temp = str(audio_temp.get_path())
 	Inventory.add_item("fita_cassete")
 	_call_tutorial("tutorial_inventario")
-	fita.queue_free()
 	fita_audio      = audio_temp
 	fita_nome       = nome_temp
 	fita_texto      = texto_temp
 	fita_cor        = cor_temp
 	fita_e_calmante = calmante_temp
-
+	fita_audio_path = path_temp
+	# Persiste path do áudio no SaveManager (evita fita em branco no load)
+	if typeof(SaveManager) != TYPE_NIL and SaveManager.has_method("registrar_fita_audio"):
+		SaveManager.registrar_fita_audio(nome_temp, path_temp, texto_temp, cor_temp, calmante_temp)
+	print("[Camera] pegar_fita '%s' path='%s'" % [nome_temp, path_temp])
+	
 func mostrar_cassete_ui(nome: String):
 	cassete_nome.text  = nome
 	cassete_ui.visible = true

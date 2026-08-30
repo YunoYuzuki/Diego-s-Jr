@@ -33,10 +33,20 @@ func _ready():
 		audio_player.stream = som_switch
 
 func set_foco(ativo):
+	# Sempre limpa os dois outlines antes de acender o correto
+	# (evita outline "preso" após a Sombra forçar estado)
+	if outline1:
+		outline1.visible = false
+	if outline2:
+		outline2.visible = false
+	if not ativo:
+		return
 	if ligada:
-		outline2.visible = ativo
+		if outline2:
+			outline2.visible = true
 	else:
-		outline1.visible = ativo
+		if outline1:
+			outline1.visible = true
 
 func interagir(player):
 	if not lampada:
@@ -52,6 +62,7 @@ func interagir(player):
 		audio_player.play()
 
 ## Força estado (usado pela Sombra em blackout etc.) — altera switch + lâmpada
+## interruptor pra baixo (lightswitch) = luz DESLIGADA; pra cima (lightswitch2) = LIGADA
 func forcar_estado(nova_ligada: bool, tocar_som: bool = false) -> void:
 	ligada = nova_ligada
 	_atualizar_estado_visual()
@@ -75,6 +86,13 @@ func sincronizar_com_lampada(tocar_som: bool = false) -> void:
 	forcar_estado(lampada.visible, tocar_som)
 
 func _atualizar_estado_visual():
+	# Sempre desliga outlines ao mudar estado (Sombra ou player)
+	# evita outline ficar ligado depois que a sombra liga/desliga a luz
+	if outline1:
+		outline1.visible = false
+	if outline2:
+		outline2.visible = false
+	# lightswitch (mesh "pra baixo") = desligado | lightswitch2 ("pra cima") = ligado
 	if ligada:
 		lightswitch.visible  = false
 		lightswitch2.visible = true
@@ -103,7 +121,16 @@ func load_data(data: Dictionary) -> void:
 	if not lightswitch:
 		lightswitch  = $Lightswitch
 		lightswitch2 = $Lightswitch2
+	if outline1 == null and has_node("Lightswitch/OutlineMesh"):
+		outline1 = $Lightswitch/OutlineMesh
+	if outline2 == null and has_node("Lightswitch2/OutlineMesh"):
+		outline2 = $Lightswitch2/OutlineMesh
 		
+	# Limpa outline e aplica estado (baixo = off)
+	if outline1:
+		outline1.visible = false
+	if outline2:
+		outline2.visible = false
 	if ligada:
 		lightswitch.visible  = false
 		lightswitch2.visible = true

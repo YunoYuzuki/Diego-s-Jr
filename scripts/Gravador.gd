@@ -24,10 +24,32 @@ var _audio_em_reproducao : AudioStream = null
 var _nome_em_reproducao : String = ""
 var _texto_em_reproducao : String = ""
 var _cor_em_reproducao : Color = Color(1, 1, 1, 1)
+var _path_em_reproducao : String = ""   # resource_path do áudio (pra save mid-play)
+var _calmante_em_reproducao : bool = false
 var _fita_finished_flag : bool = false
 
 func _on_fita_finished_sinal() -> void:
 	_fita_finished_flag = true
+
+
+## Snapshot público da fita que está tocando (pro SaveManager).
+## Retorna {} se nada tocando.
+func get_fita_em_reproducao() -> Dictionary:
+	if not fita_tocando:
+		return {}
+	var path = _path_em_reproducao
+	if path == "" and _audio_em_reproducao:
+		path = str(_audio_em_reproducao.resource_path)
+	return {
+		"fita_nome": _nome_em_reproducao,
+		"fita_audio_path": path,
+		"fita_texto": _texto_em_reproducao,
+		"fita_cor_r": _cor_em_reproducao.r,
+		"fita_cor_g": _cor_em_reproducao.g,
+		"fita_cor_b": _cor_em_reproducao.b,
+		"fita_cor_a": _cor_em_reproducao.a,
+		"fita_e_calmante": _calmante_em_reproducao,
+	}
 
 func _ready():
 	add_to_group("interagivel")
@@ -78,12 +100,38 @@ func interagir(camera):
 
 	# Sem áudio/nome válidos = inventário tem item “fantasma” (ex.: pegou fita 2
 	# enquanto a 1 tocava e o fim da 1 apagou os dados da câmera).
+	# Tenta recuperar áudio pelo path salvo (após load)
+	if audio == null and camera and "fita_audio_path" in camera and str(camera.fita_audio_path) != "":
+		var stream = load(str(camera.fita_audio_path))
+		if stream:
+			audio = stream
+			camera.fita_audio = stream
+	if (audio == null or nome == "") and camera and str(camera.get("fita_nome")) != "":
+		nome = str(camera.fita_nome)
 	if audio == null or nome == "":
 		camera._mostrar_mensagem("Essa fita parece estar em branco...")
-		# Remove o item inválido pra não travar o inventário
-		if Inventory.has_item("fita_cassete"):
-			Inventory.remove_item("fita_cassete")
+		# NÃO remove mais automaticamente — pode ser bug de load; evita perder item
+		push_warning("[Gravador] Fita sem áudio/nome. path=%s nome=%s" % [
+			str(camera.fita_audio_path) if camera and "fita_audio_path" in camera else "?",
+			nome
+		])
 		return
+
+	# Captura path do áudio ANTES de limpar a câmera (crítico pro save)
+	var path_audio := ""
+	if camera and "fita_audio_path" in camera and str(camera.fita_audio_path) != "":
+		path_audio = str(camera.fita_audio_path)
+	if path_audio == "" and audio != null:
+		path_audio = str(audio.resource_path)
+	if path_audio == "" and audio != null and audio.resource_path == "":
+		# tenta path do resource via get_path se disponível
+		if audio.has_method("get_path"):
+			path_audio = str(audio.get_path())
+
+	# Registra no SaveManager pra nunca perder o áudio dessa fita
+	if typeof(SaveManager) != TYPE_NIL and SaveManager.has_method("registrar_fita_audio"):
+		SaveManager.registrar_fita_audio(nome, path_audio, texto, cor,
+			bool(camera.fita_e_calmante) if camera and "fita_e_calmante" in camera else false)
 
 	# Tira a fita do inventário na hora em que é colocada no gravador
 	if Inventory.has_item("fita_cassete"):
@@ -94,16 +142,17 @@ func interagir(camera):
 	if camera and "fita_e_calmante" in camera:
 		era_calmante = bool(camera.fita_e_calmante)
 
-	# Limpa áudio/nome da câmera; mantém fita_e_calmante enquanto toca
+	# Limpa áudio/nome da câmera; NÃO apaga fita_audio_path (serve de backup pro save)
 	if camera:
 		camera.fita_audio = null
 		camera.fita_nome = ""
 		camera.fita_texto = ""
 		camera.fita_e_calmante = era_calmante
+		# mantém camera.fita_audio_path intacto
 
-	_tocar_fita(camera, audio, nome, texto, cor, era_calmante)
+	_tocar_fita(camera, audio, nome, texto, cor, era_calmante, path_audio)
 
-func _tocar_fita(camera, audio: AudioStream, nome: String, texto: String = "", cor: Color = Color(1, 1, 1, 1), era_calmante: bool = false):
+func _tocar_fita(camera, audio: AudioStream, nome: String, texto: String = "", cor: Color = Color(1, 1, 1, 1), era_calmante: bool = false, path_audio: String = ""):
 	fita_tocando = true
 	var id_desta = _reproducao_id
 	# Snapshot local + no gravador (pro cancelar_save devolver a fita certa)
@@ -112,6 +161,13 @@ func _tocar_fita(camera, audio: AudioStream, nome: String, texto: String = "", c
 	_nome_em_reproducao = nome
 	_texto_em_reproducao = texto
 	_cor_em_reproducao = cor
+	_path_em_reproducao = path_audio
+	if _path_em_reproducao == "" and audio:
+		_path_em_reproducao = str(audio.resource_path)
+	if _path_em_reproducao == "" and camera and "fita_audio_path" in camera:
+		_path_em_reproducao = str(camera.fita_audio_path)
+	_calmante_em_reproducao = era_calmante
+	print("[Gravador] Tocando fita '%s' path='%s'" % [nome, _path_em_reproducao])
 	_animar_portinha(false)
 	yield(get_tree().create_timer(tween_speed + 0.1), "timeout")
 	# Cancelada durante a animação da portinha (ex.: auto-save)
@@ -183,6 +239,8 @@ func _finalizar_reproducao(camera, nome_desta_reproducao: String, era_calmante: 
 	_audio_em_reproducao = null
 	_nome_em_reproducao = ""
 	_texto_em_reproducao = ""
+	_path_em_reproducao = ""
+	_calmante_em_reproducao = false
 
 	if camera:
 		if camera.has_method("esconder_cassete_ui"):
@@ -237,12 +295,18 @@ func cancelar_reproducao_para_save() -> void:
 			cam.fita_texto = _texto_em_reproducao
 			if "fita_cor" in cam:
 				cam.fita_cor = _cor_em_reproducao
+			if "fita_audio_path" in cam:
+				cam.fita_audio_path = _path_em_reproducao
+			if "fita_e_calmante" in cam:
+				cam.fita_e_calmante = _calmante_em_reproducao
 		if cam.has_method("esconder_cassete_ui"):
 			cam.esconder_cassete_ui()
 		break
 	_audio_em_reproducao = null
 	_nome_em_reproducao = ""
 	_texto_em_reproducao = ""
+	_path_em_reproducao = ""
+	_calmante_em_reproducao = false
 	_set_portinha_aberta(true)
 	fita_tocando = false
 	jogador = null

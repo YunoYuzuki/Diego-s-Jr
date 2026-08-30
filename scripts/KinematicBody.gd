@@ -27,7 +27,6 @@ var vel          := Vector3.ZERO
 
 var _zonas_luz_count : int = 0
 var esta_na_luz : bool = false
-var bloqueado_por_colisao : bool = false
 
 # Passos: evita stop/start quando is_on_floor() pisca false por 1 frame
 var _chao_grace : float = 0.0
@@ -88,14 +87,6 @@ func _physics_process(delta):
 	
 	if camera.inspecionando:
 		return
-
-	# CartasUI aberta: sem movimento (árvore NÃO pausada)
-	# get() seguro no Godot 3 — "x" in obj quebra com null
-	if typeof(CartasUI) != TYPE_NIL and is_instance_valid(CartasUI) and CartasUI.get("esta_aberta") == true:
-		return
-	for n in get_tree().get_nodes_in_group("cartas_ui"):
-		if is_instance_valid(n) and n.get("esta_aberta") == true:
-			return
 	
 	var dir = Vector3.ZERO
 	if Input.is_action_pressed("w"): dir -= transform.basis.z
@@ -107,6 +98,8 @@ func _physics_process(delta):
 
 	var wants_to_sprint = Input.is_action_pressed("shift") and dir.length() > 0.1 and is_on_floor()
 	is_sprinting        = wants_to_sprint and can_sprint and current_stamina > 0
+	if wants_to_sprint and typeof(TutorialManager) != TYPE_NIL and TutorialManager.has_method("tutorial_correr"):
+		TutorialManager.tutorial_correr()
 	var mult_emocional  = camera.get_velocidade_mult() if camera and camera.has_method("get_velocidade_mult") else 1.0
 	var current_speed   = (sprint_velocity if is_sprinting else velocity) * mult_emocional
 
@@ -121,23 +114,13 @@ func _physics_process(delta):
 	vel.y += gravity * delta
 	move_and_slide(vel, Vector3.UP)
 
-	# Detecta colisão contra parede/objeto (não-chão) e trava o movimento na hora
-	bloqueado_por_colisao = false
-	for i in get_slide_count():
-		var colisao = get_slide_collision(i)
-		if colisao.normal.dot(Vector3.UP) < 0.7:
-			vel.x = 0.0
-			vel.z = 0.0
-			bloqueado_por_colisao = true
-			break
-
 	# Depois do move: se tocou o chão, renova o grace
 	if is_on_floor():
 		_chao_grace = CHAO_GRACE_TEMPO
 
 	_handle_footsteps(delta, dir)
 	_handle_stamina(delta, dir)
-		
+
 func _on_passos_finished() -> void:
 	# Stream sem loop: se ainda está andando, toca de novo sem buraco
 	if _quer_passos and passos:
@@ -201,9 +184,9 @@ func save():
 		"pos_x"             : translation.x,
 		"pos_y"             : translation.y,
 		"pos_z"             : translation.z,
-		"scale_z"           : scale.z,
-		"scale_y"           : scale.y,
 		"scale_x"           : scale.x,
+		"scale_y"           : scale.y,
+		"scale_z"           : scale.z,
 		"current_stamina"   : current_stamina,
 		"rot_x"             : rot_x,               # pitch (olhar cima/baixo), em graus
 		"rot_y"             : camera.target_yaw,    # yaw (girar esquerda/direita), em radianos
@@ -211,7 +194,7 @@ func save():
 		"lanterna_equipada" : camera.lanterna_atual != null,
 		"lanterna_ligada"   : lanterna_ligada,
 		"fita_nome"         : camera.fita_nome,
-		"fita_audio_path"   : camera.fita_audio.resource_path if camera.fita_audio else "",
+		"fita_audio_path"   : (camera.fita_audio_path if ("fita_audio_path" in camera and str(camera.fita_audio_path) != "") else (camera.fita_audio.resource_path if camera.fita_audio else "")),
 		"fita_texto"        : camera.fita_texto,
 		"fita_cor_r"        : camera.fita_cor.r,
 		"fita_cor_g"        : camera.fita_cor.g,
@@ -223,6 +206,13 @@ func save():
 # LOAD DO PLAYER — faltava esse método, por isso a posição/rotação
 # não voltavam de fato ao carregar o save.
 func load_data(data: Dictionary) -> void:
+	if data.has("scale_x"):
+		scale = Vector3(
+			data.get("scale_x", scale.x),
+			data.get("scale_y", scale.y),
+			data.get("scale_z", scale.z)
+		)
+
 	current_stamina = data.get("current_stamina", current_stamina)
 
 	var pitch_deg = data.get("rot_x", 0.0)
@@ -240,3 +230,22 @@ func load_data(data: Dictionary) -> void:
 		camera.current_pitch = deg2rad(pitch_deg)
 		camera.target_yaw    = yaw_rad
 		camera.current_yaw   = yaw_rad
+
+	# Restaura fita do inventário (nome + áudio) pro gravador funcionar após load
+	if camera and str(data.get("fita_nome", "")) != "":
+		camera.fita_nome = str(data.get("fita_nome", ""))
+		camera.fita_texto = str(data.get("fita_texto", ""))
+		camera.fita_e_calmante = bool(data.get("fita_e_calmante", false))
+		camera.fita_cor = Color(
+			float(data.get("fita_cor_r", 1.0)),
+			float(data.get("fita_cor_g", 1.0)),
+			float(data.get("fita_cor_b", 1.0)),
+			float(data.get("fita_cor_a", 1.0))
+		)
+		var ap = str(data.get("fita_audio_path", ""))
+		if "fita_audio_path" in camera:
+			camera.fita_audio_path = ap
+		if ap != "":
+			var stream = load(ap)
+			if stream:
+				camera.fita_audio = stream
