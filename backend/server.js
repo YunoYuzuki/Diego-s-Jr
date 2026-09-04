@@ -51,10 +51,11 @@ async function ensureUserColumns() {
     for (const sql of cols) {
         try { await pool.query(sql); } catch (e) { /* já existe */ }
     }
-    // Contas legadas (sem token de verificação) ficam liberadas
+    // TEMP: verificação de e-mail DESLIGADA (Netlify / sem domínio SMTP).
+    // Libera todas as contas pendentes pra não ficarem presas.
     try {
         await pool.query(
-            "UPDATE users SET email_verified = 1 WHERE email_verified = 0 AND (email_verify_token IS NULL OR email_verify_token = '')"
+            "UPDATE users SET email_verified = 1, email_verify_token = NULL, email_verify_expires = NULL WHERE email_verified = 0"
         );
     } catch (e) { /* ignore */ }
 }
@@ -62,79 +63,24 @@ ensureUserColumns().catch(err => console.error('ensureUserColumns', err));
 
 const VERIFY_TOKEN_HOURS = 24;
 
-// -------------------------------------------------------------------
-// Envio de e-mail — dois provedores possíveis:
-//
-// 1) RESEND (recomendado): API por HTTPS, não depende de porta SMTP.
-//    Hospedagens como Railway costumam bloquear/travar conexões SMTP
-//    (porta 25/465/587), e isso faz o e-mail nunca sair sem nenhum erro
-//    visível pro usuário — a conta fica criada mas travada pra sempre
-//    esperando uma confirmação que nunca chega. Usando Resend (ou
-//    qualquer API HTTP de e-mail) esse problema desaparece porque é só
-//    uma requisição HTTPS normal, igual qualquer outra chamada de API.
-//    Basta criar uma conta grátis em https://resend.com e definir
-//    RESEND_API_KEY nas variáveis de ambiente.
-//
-// 2) SMTP tradicional (nodemailer) — mantido como alternativa/fallback
-//    caso você prefira usar Gmail, Mailgun SMTP, etc. Se RESEND_API_KEY
-//    estiver definida, ela tem prioridade; senão cai pro SMTP.
-// -------------------------------------------------------------------
-
 function createMailTransporter() {
     const host = process.env.SMTP_HOST;
     const user = process.env.SMTP_USER;
     const pass = process.env.SMTP_PASS;
     if (!host || !user || !pass) {
-        console.warn('[email] SMTP incompleto. Defina SMTP_HOST, SMTP_USER e SMTP_PASS (ou use RESEND_API_KEY).');
+        console.warn('[email] SMTP incompleto. Defina SMTP_HOST, SMTP_USER e SMTP_PASS no Railway.');
         return null;
     }
-    const port = Number(process.env.SMTP_PORT || 587);
-    // Bug corrigido: porta 465 SEMPRE exige TLS implícito (secure=true).
-    // Antes, se SMTP_SECURE não fosse setada, ficava sempre "false" e a
-    // conexão na porta 465 falhava sem explicação. Agora, se SMTP_SECURE
-    // não for definida explicitamente, deduzimos pelo valor da porta.
-    const secure = process.env.SMTP_SECURE !== undefined
-        ? String(process.env.SMTP_SECURE) === 'true'
-        : port === 465;
     return nodemailer.createTransport({
         host,
-        port,
-        secure,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: String(process.env.SMTP_SECURE || 'false') === 'true',
         auth: { user, pass }
     });
 }
 
 function frontendBaseUrl() {
     return String(process.env.FRONTEND_URL || process.env.SITE_URL || 'https://limboofmemories.netlify.app').replace(/\/$/, '');
-}
-
-// Envia via Resend (API HTTPS). Retorna null se RESEND_API_KEY não estiver
-// configurada (nesse caso o chamador cai pro SMTP), ou { sent, reason?, error? }.
-async function sendViaResend(email, subject, text, html) {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) return null;
-
-    const from = process.env.RESEND_FROM || 'Limbo of Memories <onboarding@resend.dev>';
-    try {
-        const resp = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ from, to: email, subject, text, html })
-        });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok) {
-            console.error('[email] Resend recusou o envio:', resp.status, data);
-            return { sent: false, reason: 'resend_error', error: (data && (data.message || data.name)) || `HTTP ${resp.status}` };
-        }
-        console.log('[email] enviado via Resend para', email, 'id=', data && data.id);
-        return { sent: true };
-    } catch (err) {
-        console.error('[email] erro de rede ao chamar a API do Resend:', err && err.message ? err.message : err);
-        return { sent: false, reason: 'resend_network_error', error: String(err && err.message || err) };
-    }
 }
 
 async function sendVerificationEmail(email, username, rawToken) {
@@ -162,51 +108,21 @@ async function sendVerificationEmail(email, username, rawToken) {
         <p style="color:#a1a1aa;font-size:12px;margin-top:24px;">Se você não criou esta conta, ignore este e-mail.</p>
       </div>`;
 
-    // 1) Resend primeiro, se configurado (mais confiável em hospedagens como Railway)
-    const viaResend = await sendViaResend(email, subject, text, html);
-    if (viaResend) {
-        return { ...viaResend, link };
-    }
-
-    // 2) Fallback: SMTP tradicional
     const transporter = createMailTransporter();
     if (!transporter) {
-        console.warn('[email] Nenhum provedor de e-mail configurado (RESEND_API_KEY ou SMTP_*). Link de verificação (dev):', link);
-        return { sent: false, link, reason: 'no_provider_configured' };
+        console.warn('[email] SMTP não configurado. Link de verificação (dev):', link);
+        return { sent: false, link, reason: 'smtp_not_configured' };
     }
     const from = process.env.SMTP_FROM || process.env.SMTP_USER;
     try {
         const info = await transporter.sendMail({ from, to: email, subject, text, html });
-        console.log('[email] enviado via SMTP para', email, 'id=', info && info.messageId);
+        console.log('[email] enviado para', email, 'id=', info && info.messageId);
         return { sent: true, link };
     } catch (err) {
         console.error('[email] falha SMTP:', err && err.message ? err.message : err);
         return { sent: false, link, reason: 'smtp_error', error: String(err && err.message || err) };
     }
 }
-
-// Testa a conexão de e-mail assim que o servidor sobe, pra aparecer um aviso
-// claro no log ANTES de alguém tentar se cadastrar (em vez de descobrir o
-// problema só quando um usuário reclamar que não recebeu nada).
-async function checarConfiguracaoDeEmail() {
-    if (process.env.RESEND_API_KEY) {
-        console.log('[email] Provedor: Resend (API HTTPS). OK, nenhuma verificação de conexão necessária.');
-        return;
-    }
-    const transporter = createMailTransporter();
-    if (!transporter) {
-        console.warn('[email] ATENÇÃO: nenhum provedor de e-mail configurado. Ninguém vai receber o e-mail de verificação até você definir RESEND_API_KEY ou SMTP_HOST/SMTP_USER/SMTP_PASS.');
-        return;
-    }
-    try {
-        await transporter.verify();
-        console.log('[email] Provedor: SMTP. Conexão verificada com sucesso.');
-    } catch (err) {
-        console.error('[email] ATENÇÃO: falha ao conectar no SMTP configurado:', err && err.message ? err.message : err);
-        console.error('[email] Causas comuns: host/porta errados, usuário ou senha incorretos (no Gmail é preciso gerar uma "Senha de app", a senha normal da conta NÃO funciona), ou a hospedagem está bloqueando a porta SMTP. Se o problema persistir, defina RESEND_API_KEY para usar envio por HTTPS em vez de SMTP.');
-    }
-}
-checarConfiguracaoDeEmail();
 
 function hashToken(raw) {
     return crypto.createHash('sha256').update(String(raw)).digest('hex');
@@ -303,34 +219,27 @@ app.post('/api/register', async (req, res) => {
             return res.status(409).json({ error: 'Usuário ou e-mail já cadastrado.' });
         }
         const passwordHash = await bcrypt.hash(password, 10);
-        const rawToken = crypto.randomBytes(32).toString('hex');
-        const tokenHash = hashToken(rawToken);
-        const expires = new Date(Date.now() + VERIFY_TOKEN_HOURS * 60 * 60 * 1000);
 
+        // TEMP: sem verificação de e-mail — conta já nasce ativa e devolve JWT
         const [result] = await pool.query(
             `INSERT INTO users (username, email, password_hash, nickname, email_verified, email_verify_token, email_verify_expires)
-             VALUES (?, ?, ?, ?, 0, ?, ?)`,
-            [userNorm, emailNorm, passwordHash, userNorm, tokenHash, expires]
+             VALUES (?, ?, ?, ?, 1, NULL, NULL)`,
+            [userNorm, emailNorm, passwordHash, userNorm]
         );
         await pool.query('INSERT INTO game_progress (user_id) VALUES (?)', [result.insertId]);
 
-        let mailInfo = { sent: false };
-        try {
-            mailInfo = await sendVerificationEmail(emailNorm, userNorm, rawToken);
-        } catch (mailErr) {
-            console.error('[email] falha ao enviar verificação:', mailErr);
-        }
-
-        // Não devolve JWT — precisa confirmar o e-mail primeiro
+        const token = jwt.sign(
+            { userId: result.insertId, username: userNorm, role: 'user' },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
         res.status(201).json({
             ok: true,
-            needs_verification: true,
-            email: emailNorm,
+            token,
             username: userNorm,
-            message: mailInfo.sent
-                ? 'Conta criada! Enviamos um e-mail de confirmação. Abra o link para ativar sua conta.'
-                : 'Conta criada! Não foi possível enviar o e-mail agora — use "Reenviar verificação" ou configure o SMTP no servidor.',
-            // Em ambiente sem SMTP, o link aparece só no log do servidor (não no JSON público)
+            nickname: userNorm,
+            role: 'user',
+            message: 'Conta criada! Você já pode entrar.'
         });
     } catch (err) {
         console.error(err);
@@ -384,53 +293,20 @@ app.post('/api/verify-email', async (req, res) => {
 });
 
 app.post('/api/resend-verification', async (req, res) => {
+    // TEMP: verificação de e-mail desligada — endpoint só responde ok
     const emailNorm = String((req.body && req.body.email) || '').trim().toLowerCase();
-    if (!emailNorm) {
-        return res.status(400).json({ error: 'Informe o e-mail da conta.' });
-    }
-    try {
-        const [rows] = await pool.query(
-            'SELECT id, username, email_verified FROM users WHERE email = ? LIMIT 1',
-            [emailNorm]
-        );
-        // Resposta genérica anti-enumeration
-        if (!rows.length) {
-            return res.json({ ok: true, message: 'Se o e-mail existir e ainda não estiver verificado, enviaremos um novo link.' });
-        }
-        const user = rows[0];
-        if (user.email_verified) {
-            return res.json({ ok: true, message: 'Esta conta já está verificada. Pode entrar normalmente.' });
-        }
-        const rawToken = crypto.randomBytes(32).toString('hex');
-        const tokenHash = hashToken(rawToken);
-        const expires = new Date(Date.now() + VERIFY_TOKEN_HOURS * 60 * 60 * 1000);
-        await pool.query(
-            'UPDATE users SET email_verify_token = ?, email_verify_expires = ? WHERE id = ?',
-            [tokenHash, expires, user.id]
-        );
-        let mailInfo = { sent: false };
+    if (emailNorm) {
         try {
-            mailInfo = await sendVerificationEmail(emailNorm, user.username, rawToken);
-        } catch (mailErr) {
-            console.error('[email] resend falhou:', mailErr);
-            return res.status(500).json({
-                error: 'Não foi possível enviar o e-mail agora. Confira SMTP_HOST / SMTP_USER / SMTP_PASS no Railway.',
-                reason: 'smtp_error'
-            });
-        }
-        if (!mailInfo.sent) {
-            return res.status(503).json({
-                error: mailInfo.reason === 'smtp_not_configured'
-                    ? 'O servidor ainda não está configurado para enviar e-mails (SMTP). Peça ao admin para configurar SMTP_HOST, SMTP_USER e SMTP_PASS.'
-                    : ('Falha ao enviar e-mail: ' + (mailInfo.error || 'erro SMTP')),
-                reason: mailInfo.reason || 'smtp_error'
-            });
-        }
-        res.json({ ok: true, message: 'Enviamos um novo link de verificação. Confira a caixa de entrada e o spam.' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Erro ao reenviar verificação.' });
+            await pool.query(
+                'UPDATE users SET email_verified = 1, email_verify_token = NULL, email_verify_expires = NULL WHERE email = ? AND email_verified = 0',
+                [emailNorm]
+            );
+        } catch (e) { /* ignore */ }
     }
+    res.json({
+        ok: true,
+        message: 'Verificação de e-mail está desativada no momento. Você já pode entrar com usuário e senha.'
+    });
 });
 
 app.post('/api/login', async (req, res) => {
@@ -451,14 +327,7 @@ app.post('/api/login', async (req, res) => {
         if (!valid) {
             return res.status(401).json({ error: 'Usuário ou senha incorretos.' });
         }
-        // Contas novas precisam confirmar e-mail; legadas já vêm com email_verified=1
-        if (user.email_verified === 0 || user.email_verified === false) {
-            return res.status(403).json({
-                error: 'Confirme seu e-mail antes de entrar. Verifique a caixa de entrada (e o spam).',
-                needs_verification: true,
-                email: user.email || null
-            });
-        }
+        // TEMP: verificação de e-mail desligada — login liberado mesmo se email_verified=0
         if (user.is_banned) {
             return res.status(403).json({
                 error: 'Conta banida.',
