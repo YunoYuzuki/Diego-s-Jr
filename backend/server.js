@@ -648,14 +648,54 @@ app.post('/api/presence', authMiddleware, async (req, res) => {
 // =========================================================
 // CLOUD SAVES (save completo do jogo por slot)
 // =========================================================
+function summarizeSaveJson(saveJson) {
+    let data = {};
+    try {
+        data = typeof saveJson === 'string' ? JSON.parse(saveJson) : (saveJson || {});
+    } catch (_) {
+        return { capitulo: '?', playtime_seconds: 0, fitas: 0, cartas: 0, corrupt: true };
+    }
+    const fr = data.fitas_reproduzidas || {};
+    let fitas = 0;
+    if (Array.isArray(fr)) fitas = fr.length;
+    else if (fr && typeof fr === 'object') {
+        for (const k of Object.keys(fr)) {
+            if (fr[k]) fitas += 1;
+        }
+    }
+    const cartasArr = data.cartas || [];
+    let cartas = 0;
+    if (Array.isArray(cartasArr)) cartas = cartasArr.length;
+    else if (cartasArr && typeof cartasArr === 'object') cartas = Object.keys(cartasArr).length;
+    return {
+        capitulo: data.capitulo || 'O Limbo',
+        playtime_seconds: parseInt(data.playtime_seconds || 0, 10) || 0,
+        fitas,
+        cartas,
+        corrupt: false
+    };
+}
+
 app.get('/api/saves', authMiddleware, async (req, res) => {
     try {
         const [rows] = await pool.query(
-            `SELECT slot, updated_at, CHAR_LENGTH(save_json) AS size
+            `SELECT slot, updated_at, CHAR_LENGTH(save_json) AS size, save_json
              FROM cloud_saves WHERE user_id = ? ORDER BY slot ASC`,
-            [req.user.userId]
+            [req.userId]
         );
-        res.json(rows);
+        const out = rows.map(r => {
+            const sum = summarizeSaveJson(r.save_json);
+            return {
+                slot: r.slot,
+                updated_at: r.updated_at,
+                size: r.size,
+                capitulo: sum.capitulo,
+                playtime_seconds: sum.playtime_seconds,
+                fitas: sum.fitas,
+                cartas: sum.cartas
+            };
+        });
+        res.json(out);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Erro ao listar saves na nuvem.' });
@@ -670,7 +710,7 @@ app.get('/api/saves/:slot', authMiddleware, async (req, res) => {
         }
         const [rows] = await pool.query(
             'SELECT save_json, updated_at FROM cloud_saves WHERE user_id = ? AND slot = ?',
-            [req.user.userId, slot]
+            [req.userId, slot]
         );
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Save não encontrado na nuvem.' });
@@ -706,7 +746,7 @@ app.put('/api/saves/:slot', authMiddleware, async (req, res) => {
             `INSERT INTO cloud_saves (user_id, slot, save_json)
              VALUES (?, ?, ?)
              ON DUPLICATE KEY UPDATE save_json = VALUES(save_json), updated_at = CURRENT_TIMESTAMP`,
-            [req.user.userId, slot, saveJson]
+            [req.userId, slot, saveJson]
         );
         res.json({ ok: true, slot });
     } catch (err) {
@@ -718,11 +758,72 @@ app.put('/api/saves/:slot', authMiddleware, async (req, res) => {
 app.delete('/api/saves/:slot', authMiddleware, async (req, res) => {
     try {
         const slot = parseInt(req.params.slot, 10);
-        await pool.query('DELETE FROM cloud_saves WHERE user_id = ? AND slot = ?', [req.user.userId, slot]);
+        await pool.query('DELETE FROM cloud_saves WHERE user_id = ? AND slot = ?', [req.userId, slot]);
         res.json({ ok: true });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Erro ao apagar save na nuvem.' });
+    }
+});
+
+// Admin: saves de um jogador
+app.get('/api/admin/users/:id/saves', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id, 10);
+        if (Number.isNaN(userId)) return res.status(400).json({ error: 'ID inválido.' });
+        const [userRows] = await pool.query(
+            'SELECT id, username, nickname FROM users WHERE id = ? LIMIT 1',
+            [userId]
+        );
+        if (!userRows.length) return res.status(404).json({ error: 'Usuário não encontrado.' });
+        const [rows] = await pool.query(
+            `SELECT slot, updated_at, CHAR_LENGTH(save_json) AS size, save_json
+             FROM cloud_saves WHERE user_id = ? ORDER BY slot ASC`,
+            [userId]
+        );
+        const saves = rows.map(r => {
+            const sum = summarizeSaveJson(r.save_json);
+            return {
+                slot: r.slot,
+                updated_at: r.updated_at,
+                size: r.size,
+                capitulo: sum.capitulo,
+                playtime_seconds: sum.playtime_seconds,
+                fitas: sum.fitas,
+                cartas: sum.cartas
+            };
+        });
+        res.json({ user: userRows[0], saves });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao listar saves do usuário.' });
+    }
+});
+
+app.delete('/api/admin/users/:id/saves/:slot', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id, 10);
+        const slot = parseInt(req.params.slot, 10);
+        if (Number.isNaN(userId) || Number.isNaN(slot)) {
+            return res.status(400).json({ error: 'Parâmetros inválidos.' });
+        }
+        await pool.query('DELETE FROM cloud_saves WHERE user_id = ? AND slot = ?', [userId, slot]);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao apagar save.' });
+    }
+});
+
+app.delete('/api/admin/users/:id/saves', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id, 10);
+        if (Number.isNaN(userId)) return res.status(400).json({ error: 'ID inválido.' });
+        await pool.query('DELETE FROM cloud_saves WHERE user_id = ?', [userId]);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao apagar saves do usuário.' });
     }
 });
 
