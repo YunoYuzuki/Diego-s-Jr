@@ -1,0 +1,1 @@
+Arraste a pasta no Netlify Drop ou conecte o repo.

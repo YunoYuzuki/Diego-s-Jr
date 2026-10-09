@@ -1,0 +1,1 @@
+{"name":"limbo-of-memories-site","private":true,"dependencies":{"bcryptjs":"^2.4.3","cors":"^2.8.5","express":"^4.21.2","jsonwebtoken":"^9.0.2","nodemailer":"^6.9.16","serverless-http":"^3.2.0"}}
