@@ -1,10 +1,19 @@
-# Feedback — Aulas 02 e 03
+# Feedback das Aulas 02 e 03
 
-A entrega foi localizada na cópia do grupo LuizaoAntonio/Diego-s-Jr.
+Luiz, conferi os arquivos que estão na sua pasta na cópia do repositório do grupo.
 
-- Aula 02: 0,00/0,10. Não foi localizado arquivo ou resposta da Aula 02.
-- Aula 03: 0,00/0,10. Não foi localizada implementação ou resposta da Aula 03.
+## Aula 02
 
-O arquivo encontrado nessa pasta é da Aula 01. Para recuperar as notas, inclua as respostas de Promise/async/await e o laboratório de JavaScript puro das Aulas 02 e 03.
+Nota: 0,00 de 0,10.
 
-Nota das Aulas 02 e 03: 0,00.
+Não encontrei as respostas da Aula 02 sobre Promise, async e await.
+
+## Aula 03
+
+Nota: 0,00 de 0,10.
+
+Também não encontrei a implementação do laboratório de JavaScript puro nem as respostas dos experimentos.
+
+O arquivo localizado na sua pasta é da Aula 01. Para recuperar as notas, ainda falta entregar as atividades das Aulas 02 e 03.
+
+Nota final das Aulas 02 e 03: 0,00.
