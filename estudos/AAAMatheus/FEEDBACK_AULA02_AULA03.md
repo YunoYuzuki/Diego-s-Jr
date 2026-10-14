@@ -1,8 +1,19 @@
-# Feedback — Aulas 02 e 03
+# Feedback das Aulas 02 e 03
 
-A entrega foi localizada na cópia do grupo LuizaoAntonio/Diego-s-Jr.
+Matheus, conferi os arquivos da sua pasta na cópia do repositório do grupo.
 
-- Aula 02: 0,00/0,10. O arquivo aula02.js existe, mas está vazio.
-- Aula 03: 0,00/0,10. O arquivo aula03.js existe, mas está vazio.
+## Aula 02
 
-Nota das Aulas 02 e 03: 0,00. É necessário preencher os arquivos com as respostas e a implementação solicitadas.
+Nota: 0,00 de 0,10.
+
+O arquivo da Aula 02 foi criado, mas está vazio. Por isso não consegui considerar a atividade como entregue.
+
+## Aula 03
+
+Nota: 0,00 de 0,10.
+
+O arquivo da Aula 03 também foi criado, mas está vazio. Não há respostas nem implementação para eu avaliar.
+
+Nota final das Aulas 02 e 03: 0,00.
+
+Para recuperar essas notas, complete os arquivos com as respostas da Aula 02 e a implementação do laboratório de JavaScript puro da Aula 03.
