@@ -1,17 +1,13 @@
-# Feedback das Aulas 02 e 03
+Aula 01. Nota: 0,00 de 0,10.
 
-Tadeu, conferi sua entrega na cópia do repositório do grupo.
+Não encontrei arquivo de JavaScript moderno seu. Nota 0,00.
 
-## Aula 02
+Aula 02. Nota: 0,05 de 0,10.
 
-Nota: 0,10 de 0,10.
+O aula02/aula02.js é idêntico, byte a byte, ao arquivo de outra integrante do grupo, que foi enviado quatro horas antes. O conteúdo está correto, mas desse jeito eu não consigo dizer que é um trabalho seu. Por isso a nota é metade, 0,05, com desconto pela cópia.
 
-Você respondeu as 10 questões sobre Promise, estados, async e await, fetch e map com funções assíncronas. O conteúdo está de acordo com o que foi trabalhado em aula.
+Aula 03. Nota: 0,10 de 0,10.
 
-## Aula 03
+O index.html na raiz da sua pasta tem a versão 1 certa: lista, contador, inclusão de tarefa e a função desenhar. Pequenos acertos de detalhe: faltou espaço antes de "(feita)" e entre o número e a palavra "tarefas". Dentro da pasta aula03 há outra versão que mistura React sem importar o useState e não roda; considerei a de JavaScript puro. Faltaram as respostas dos quatro experimentos e o registro. Nota 0,10.
 
-Nota: 0,10 de 0,10.
-
-No arquivo principal você fez a lista de tarefas usando JavaScript puro, contador, inclusão de novas tarefas e atualização da tela. Também encontrei outra versão dentro da pasta aula03, mas ela mistura React sem configurar o useState. Considerei a implementação funcional que você deixou no arquivo principal.
-
-Nota final das Aulas 02 e 03: 0,20.
+**Nota das Aulas 01, 02 e 03: 0,15 de 0,30.**
